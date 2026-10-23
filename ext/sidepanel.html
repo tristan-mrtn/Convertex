@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Convertex</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Convertex</h1>
+      <p class="badge"><span class="dot"></span>100 % local, aucun envoi réseau</p>
+    </div>
+    <button id="openTab" class="ghost" title="Ouvrir dans un onglet">⤢</button>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" class="tab active" data-tab="convert">Convertir</button>
+    <button role="tab" class="tab" data-tab="graph">Graphe</button>
+  </nav>
+
+  <main>
+    <section id="tab-convert" class="tabpane">
+      <label id="dropzone" for="fileInput">
+        <span class="drop-icon">⇣</span>
+        <span>Dépose un fichier ici</span>
+        <small>ou clique pour en choisir un</small>
+        <input type="file" id="fileInput" hidden>
+      </label>
+
+      <div id="fileCard" class="card" hidden>
+        <div class="file-row">
+          <span id="fileBadge" class="fmt-badge"></span>
+          <div class="file-meta">
+            <div id="fileName" class="file-name"></div>
+            <div id="fileSize" class="muted"></div>
+          </div>
+          <button id="clearFile" class="ghost" title="Retirer le fichier">✕</button>
+        </div>
+        <label class="muted small override">
+          Format détecté
+          <select id="formatOverride"></select>
+        </label>
+      </div>
+
+      <div id="targetsCard" class="card" hidden>
+        <div class="targets-head">
+          <strong id="targetsCount"></strong>
+          <input id="search" type="search" placeholder="Filtrer…" autocomplete="off">
+        </div>
+        <div id="targets"></div>
+      </div>
+
+      <div id="actionCard" class="card" hidden>
+        <div id="pathView" class="path"></div>
+        <div id="qualityRow" hidden>
+          <label for="quality" class="small">Qualité : <span id="qualityValue">90</span> %</label>
+          <input type="range" id="quality" min="10" max="100" value="90">
+        </div>
+        <button id="convertBtn" class="primary">Convertir</button>
+        <div id="progress" hidden>
+          <div class="bar"><div id="barFill"></div></div>
+          <div id="progressText" class="muted small"></div>
+        </div>
+      </div>
+
+      <p id="status" role="status"></p>
+    </section>
+
+    <section id="tab-graph" class="tabpane" hidden>
+      <p id="graphCaption" class="muted small"></p>
+      <div id="graphBox" class="graph-box"></div>
+      <div id="legend" class="legend"></div>
+      <p class="muted small">Molette pour zoomer, glisser pour se déplacer une fois zoomé, double-clic pour revenir à la vue complète. Clique un format pour le choisir.</p>
+    </section>
+  </main>
+
+  <script type="module" src="dist/sidepanel.js"></script>
+</body>
+</html>

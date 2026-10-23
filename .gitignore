@@ -1,0 +1,5 @@
+node_modules/
+ext/dist/
+ext/engines/
+scratch/
+*.zip

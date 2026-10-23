@@ -1,0 +1,28 @@
+{
+  "name": "convertex",
+  "version": "0.2.0",
+  "description": "Extension Chrome qui convertit des fichiers entre 85 formats, entièrement en local (WebAssembly)",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@imagemagick/magick-wasm": "^0.0.45",
+    "@pdf-lib/fontkit": "^1.1.1",
+    "fast-xml-parser": "^5.11.2",
+    "fflate": "^0.8.3",
+    "js-yaml": "^5.5.0",
+    "marked": "^18.1.1",
+    "pandoc-wasm": "^1.1.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.4.299",
+    "smol-toml": "^1.9.1",
+    "xlsx": "^0.18.5"
+  },
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
