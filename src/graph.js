@@ -27,8 +27,8 @@ export const EDGES = [
   { engine: "canvas", from: ["svg"], to: ["png"], cost: 1 },
 
   { engine: "ffmpeg", from: VIDEO, to: [...VIDEO, "gif"], cost: 2 },
-  { engine: "ffmpeg", from: ["gif"], to: VIDEO, cost: 2, needs: ["motion"] },
-  { engine: "ffmpeg", from: VIDEO, to: AUDIO, cost: 1 },
+  { engine: "ffmpeg", from: ["gif"], to: VIDEO, cost: 2, needs: ["motion"], drops: ["sound"] },
+  { engine: "ffmpeg", from: VIDEO, to: AUDIO, cost: 1, needs: ["sound"] },
   { engine: "ffmpeg", from: AUDIO, to: AUDIO, cost: 1 },
   { engine: "ffmpeg", from: SUBS, to: SUBS, cost: 1 },
 
@@ -45,7 +45,9 @@ export const EDGES = [
 ];
 
 const MAX_STEPS = 4;
-const BITS = { text: 1, motion: 2 };
+// "lost" est un masque de ce qui a disparu en route. Un GIF n'a pas de son :
+// une vidéo fabriquée depuis un GIF ne peut donc pas donner de fichier audio.
+const BITS = { text: 1, motion: 2, sound: 4 };
 const mask = (list = []) => list.reduce((m, x) => m | BITS[x], 0);
 
 // Liste d'adjacence : format -> [{ to, engine, cost, flags }]
@@ -67,12 +69,13 @@ export function edgeCount() {
 // Dijkstra sur des états (format, ce qui a été perdu en route), pour interdire
 // par exemple image -> PDF -> texte (fichier vide) ou photo -> GIF -> vidéo.
 export function shortestPaths(source) {
+  const startLost = source === "gif" ? BITS.sound : 0;
   const key = (f, lost) => `${f}|${lost}`;
-  const start = key(source, 0);
+  const start = key(source, startLost);
   const dist = new Map([[start, 0]]);
   const prev = new Map();
   const steps = new Map([[start, 0]]);
-  const queue = [{ f: source, lost: 0, d: 0 }];
+  const queue = [{ f: source, lost: startLost, d: 0 }];
 
   while (queue.length) {
     queue.sort((a, b) => a.d - b.d);

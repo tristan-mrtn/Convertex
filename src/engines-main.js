@@ -28,10 +28,10 @@ function readWorkbook(bytes, from) {
   if (from === "json") {
     let data = JSON.parse(dec.decode(bytes));
     if (!Array.isArray(data)) {
-      // Un objet dont une clé contient un tableau : on prend ce tableau
-      const arr = Object.values(data).find(Array.isArray);
-      if (!arr) throw new Error(t("notTable"));
-      data = arr;
+      // Un objet dont une clé contient une liste d'objets : on prend cette liste.
+      // Sinon l'objet devient une seule ligne, avec une colonne par clé.
+      const arr = Object.values(data ?? {}).find((v) => Array.isArray(v) && v.length && typeof v[0] === "object");
+      data = arr ?? [data];
     }
     const sheet = Array.isArray(data[0])
       ? XLSX.utils.aoa_to_sheet(data)

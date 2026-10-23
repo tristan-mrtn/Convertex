@@ -4,7 +4,7 @@
 import { t } from "./i18n.js";
 import { createPandocInstance } from "../node_modules/pandoc-wasm/src/core.js";
 import {
-  initializeImageMagick, ImageMagick, MagickFormat, MagickColor, AlphaAction,
+  initializeImageMagick, ImageMagick, MagickFormat, MagickColor, AlphaAction, ColorType,
 } from "@imagemagick/magick-wasm";
 
 const ENGINES = new URL("../engines/", self.location.href);
@@ -39,6 +39,11 @@ async function runMagick({ bytes, from, to, options }) {
         if (NO_ALPHA.has(to) && image.hasAlpha) {
           image.backgroundColor = new MagickColor("white");
           image.alpha(AlphaAction.Remove);
+        }
+        // Un PSD ou un TGA écrit depuis une image à palette (GIF) est mal relu par
+        // certains logiciels : on l'écrit en couleurs réelles.
+        if ((to === "psd" || to === "tga") && (image.colorType === ColorType.Palette || image.colorType === ColorType.PaletteAlpha)) {
+          image.colorType = image.hasAlpha ? ColorType.TrueColorAlpha : ColorType.TrueColor;
         }
         if (to === "ico" && (image.width > 256 || image.height > 256)) {
           image.resize(256, 256);
@@ -135,11 +140,11 @@ const VIDEO_ARGS = {
   mov:  ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac"],
   mkv:  ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac"],
   flv:  ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "44100"],
-  webm: ["-c:v", "libvpx", "-b:v", "1M", "-deadline", "realtime", "-cpu-used", "8", "-c:a", "libvorbis"],
+  webm: ["-c:v", "libvpx", "-b:v", "1M", "-deadline", "realtime", "-cpu-used", "8", "-pix_fmt", "yuv420p", "-c:a", "libvorbis"],
   avi:  ["-c:v", "mpeg4", "-q:v", "5", "-c:a", "libmp3lame"],
   wmv:  ["-c:v", "wmv2", "-q:v", "5", "-c:a", "wmav2"],
   mpeg: ["-c:v", "mpeg1video", "-q:v", "5", "-r", "25", "-c:a", "mp2"],
-  ogv:  ["-c:v", "libtheora", "-q:v", "6", "-c:a", "libvorbis"],
+  ogv:  ["-c:v", "libtheora", "-q:v", "6", "-pix_fmt", "yuv420p", "-c:a", "libvorbis"],
 };
 const AUDIO_ARGS = {
   mp3:  ["-c:a", "libmp3lame", "-q:a", "2"],
@@ -160,7 +165,7 @@ function ffmpegArgs(from, to) {
   if (to === "gif") return GIF_ARGS;
   if (VIDEO_ARGS[to]) {
     const args = [...VIDEO_ARGS[to]];
-    return ["mpeg4", "mpeg1video", "wmv2", "libtheora"].includes(args[1]) ? args : [...args, ...EVEN_SIZE];
+    return ["mpeg4", "mpeg1video", "wmv2"].includes(args[1]) ? args : [...args, ...EVEN_SIZE];
   }
   if (AUDIO_ARGS[to]) return ["-vn", ...AUDIO_ARGS[to]];
   return []; // sous-titres : ffmpeg déduit tout de l'extension
@@ -179,6 +184,9 @@ async function runFfmpeg({ id, bytes, from, to }) {
     const ret = core.ret;
     core.reset();
     if (ret !== 0) {
+      if (ffmpegLog.some((l) => /does not contain any stream|matches no streams/i.test(l))) {
+        throw new Error(t("noStream"));
+      }
       const reason = ffmpegLog.filter((l) => /error|invalid|not|unsupported|failed/i.test(l)).slice(-2).join(" ");
       throw new Error(`${t("ffmpegFailed")}${reason ? `: ${reason}` : ` (code ${ret})`}`);
     }

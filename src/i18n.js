@@ -39,6 +39,7 @@ const STRINGS = {
     imagePlaceholder: (alt) => `[image: ${alt}]`,
     noOutput: "no output",
     ffmpegFailed: "ffmpeg failed",
+    noStream: "This file has no track of that kind (for example, no audio in this video).",
     units: ["B", "KB", "MB", "GB"],
   },
   fr: {
@@ -76,6 +77,7 @@ const STRINGS = {
     imagePlaceholder: (alt) => `[image : ${alt}]`,
     noOutput: "aucune sortie",
     ffmpegFailed: "ffmpeg a échoué",
+    noStream: "Ce fichier n'a pas de piste de ce type (par exemple, pas de son dans cette vidéo).",
     units: ["o", "Ko", "Mo", "Go"],
   },
 };
