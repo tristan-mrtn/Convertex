@@ -1,6 +1,7 @@
 // Worker qui héberge les moteurs lourds (WebAssembly).
 // Chaque moteur n'est chargé que la première fois qu'on en a besoin.
 
+import { t } from "./i18n.js";
 import { createPandocInstance } from "../node_modules/pandoc-wasm/src/core.js";
 import {
   initializeImageMagick, ImageMagick, MagickFormat, MagickColor, AlphaAction,
@@ -48,7 +49,7 @@ async function runMagick({ bytes, from, to, options }) {
         image.write(magickFormat(to), (data) => resolve(new Uint8Array(data)));
       });
     } catch (err) {
-      reject(new Error(`ImageMagick : ${err.message ?? err}`));
+      reject(new Error(`ImageMagick: ${err.message ?? err}`));
     }
   });
 }
@@ -98,10 +99,10 @@ async function runPandoc({ bytes, from, to, name }) {
   const result = await pandoc.convert(options, stdin, files);
   if (BINARY_IO.has(to)) {
     const out = result.files?.[outName];
-    if (!out) throw new Error(`Pandoc : ${result.stderr || "aucune sortie"}`);
+    if (!out) throw new Error(`Pandoc: ${result.stderr || t("noOutput")}`);
     return new Uint8Array(await out.arrayBuffer());
   }
-  if (!result.stdout && result.stderr) throw new Error(`Pandoc : ${result.stderr}`);
+  if (!result.stdout && result.stderr) throw new Error(`Pandoc: ${result.stderr}`);
   return new TextEncoder().encode(result.stdout);
 }
 
@@ -179,7 +180,7 @@ async function runFfmpeg({ id, bytes, from, to }) {
     core.reset();
     if (ret !== 0) {
       const reason = ffmpegLog.filter((l) => /error|invalid|not|unsupported|failed/i.test(l)).slice(-2).join(" ");
-      throw new Error(`ffmpeg a échoué${reason ? ` : ${reason}` : ` (code ${ret})`}`);
+      throw new Error(`${t("ffmpegFailed")}${reason ? `: ${reason}` : ` (code ${ret})`}`);
     }
     return core.FS.readFile(outName);
   } finally {

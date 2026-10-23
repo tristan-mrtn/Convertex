@@ -1,6 +1,7 @@
 // Dessin du graphe en SVG, avec zoom (molette) et déplacement (glisser).
 import { FORMATS, FAMILIES } from "./formats.js";
 import { EDGES } from "./graph.js";
+import { t } from "./i18n.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const SIZE = 1000;
@@ -114,7 +115,7 @@ function drawNode(g, x, y, id, r, { label = true, angle = 0, inside = false, fon
 // Vue centrée sur un fichier : le format source au centre, un anneau par étape.
 export function renderRadial(box, source, paths, selected, onPick) {
   box.textContent = "";
-  const svg = el("svg", { xmlns: NS, role: "img", "aria-label": `Conversions possibles depuis ${FORMATS[source].label}` });
+  const svg = el("svg", { xmlns: NS, role: "img", "aria-label": t("radialAria", FORMATS[source].label) });
   box.appendChild(svg);
   const wasDrag = enablePanZoom(svg);
 
@@ -160,7 +161,7 @@ export function renderRadial(box, source, paths, selected, onPick) {
   for (const id of Object.keys(paths)) {
     const g = el("g", { class: `gnode${id === selected ? " sel" : ""}`, tabindex: 0 }, nodeLayer);
     const title = el("title", {}, g);
-    title.textContent = `${FORMATS[id].label} (${paths[id].path.length} étape${paths[id].path.length > 1 ? "s" : ""})`;
+    title.textContent = t("stepsTooltip", FORMATS[id].label, paths[id].path.length);
     drawNode(g, pos[id].x, pos[id].y, id, 11, { angle: pos[id].a });
     g.addEventListener("click", () => { if (!wasDrag()) onPick(id); });
   }
@@ -171,7 +172,7 @@ export function renderRadial(box, source, paths, selected, onPick) {
 // Vue d'ensemble (sans fichier) : toutes les familles et les liens entre elles.
 export function renderOverview(box) {
   box.textContent = "";
-  const svg = el("svg", { xmlns: NS, role: "img", "aria-label": "Graphe complet des conversions" });
+  const svg = el("svg", { xmlns: NS, role: "img", "aria-label": t("overviewAria") });
   box.appendChild(svg);
   enablePanZoom(svg);
 

@@ -9,6 +9,7 @@ import { zipSync, unzipSync, gzipSync, gunzipSync } from "fflate";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { marked } from "marked";
+import { t } from "./i18n.js";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -29,14 +30,14 @@ function readWorkbook(bytes, from) {
     if (!Array.isArray(data)) {
       // Un objet dont une clé contient un tableau : on prend ce tableau
       const arr = Object.values(data).find(Array.isArray);
-      if (!arr) throw new Error("Ce JSON n'est pas un tableau : impossible d'en faire un tableur.");
+      if (!arr) throw new Error(t("notTable"));
       data = arr;
     }
     const sheet = Array.isArray(data[0])
       ? XLSX.utils.aoa_to_sheet(data)
-      : XLSX.utils.json_to_sheet(data.map((r) => (typeof r === "object" && r ? flatten(r) : { valeur: r })));
+      : XLSX.utils.json_to_sheet(data.map((r) => (typeof r === "object" && r ? flatten(r) : { value: r })));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, sheet, "Feuille1");
+    XLSX.utils.book_append_sheet(wb, sheet, "Sheet1");
     return wb;
   }
   if (from === "csv" || from === "tsv") {
@@ -96,13 +97,13 @@ function writeTree(data, to) {
     case "json": return JSON.stringify(data, null, 2);
     case "yaml": return yaml.dump(data, { lineWidth: 120 });
     case "toml": {
-      const root = data && typeof data === "object" && !Array.isArray(data) ? data : { elements: data };
+      const root = data && typeof data === "object" && !Array.isArray(data) ? data : { items: data };
       return stringifyToml(stripNulls(root));
     }
     case "xml": {
       const isSingleRoot = data && typeof data === "object" && !Array.isArray(data)
         && Object.keys(data).length === 1;
-      const root = isSingleRoot ? data : { racine: Array.isArray(data) ? { element: data } : data };
+      const root = isSingleRoot ? data : { root: Array.isArray(data) ? { item: data } : data };
       return `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLBuilder(xmlOptions).build(root)}`;
     }
   }
@@ -280,18 +281,18 @@ class Layout {
 
 function inlineRuns(tokens, fonts, style = {}) {
   const runs = [];
-  for (const t of tokens ?? []) {
-    switch (t.type) {
-      case "strong": runs.push(...inlineRuns(t.tokens, fonts, { ...style, bold: true })); break;
-      case "em": runs.push(...inlineRuns(t.tokens, fonts, { ...style, italic: true })); break;
-      case "codespan": runs.push({ text: decodeEntities(t.text), font: fonts.mono }); break;
-      case "link": runs.push(...inlineRuns(t.tokens, fonts, { ...style, link: true })); break;
+  for (const tok of tokens ?? []) {
+    switch (tok.type) {
+      case "strong": runs.push(...inlineRuns(tok.tokens, fonts, { ...style, bold: true })); break;
+      case "em": runs.push(...inlineRuns(tok.tokens, fonts, { ...style, italic: true })); break;
+      case "codespan": runs.push({ text: decodeEntities(tok.text), font: fonts.mono }); break;
+      case "link": runs.push(...inlineRuns(tok.tokens, fonts, { ...style, link: true })); break;
       case "br": runs.push({ text: "\n", font: fonts.regular }); break;
-      case "image": runs.push({ text: `[image : ${t.text || t.href}]`, font: fonts.italic }); break;
+      case "image": runs.push({ text: t("imagePlaceholder", tok.text || tok.href), font: fonts.italic }); break;
       default: {
-        if (t.tokens) { runs.push(...inlineRuns(t.tokens, fonts, style)); break; }
+        if (tok.tokens) { runs.push(...inlineRuns(tok.tokens, fonts, style)); break; }
         const font = style.bold ? fonts.bold : style.italic ? fonts.italic : fonts.regular;
-        runs.push({ text: decodeEntities(t.text ?? t.raw ?? ""), font, color: style.link ? rgb(0.16, 0.3, 0.75) : undefined });
+        runs.push({ text: decodeEntities(tok.text ?? tok.raw ?? ""), font, color: style.link ? rgb(0.16, 0.3, 0.75) : undefined });
       }
     }
   }
@@ -304,23 +305,23 @@ function decodeEntities(s) {
 }
 
 function renderBlocks(layout, tokens, fonts, indent = 0) {
-  for (const t of tokens) {
-    switch (t.type) {
+  for (const tok of tokens) {
+    switch (tok.type) {
       case "heading": {
-        const size = [0, 22, 17, 14, 12.5, 11.5, 11][t.depth];
-        layout.y -= t.depth <= 2 ? 6 : 2;
-        layout.paragraph(inlineRuns(t.tokens, fonts, { bold: true }), { size, indent, gapAfter: 6 });
+        const size = [0, 22, 17, 14, 12.5, 11.5, 11][tok.depth];
+        layout.y -= tok.depth <= 2 ? 6 : 2;
+        layout.paragraph(inlineRuns(tok.tokens, fonts, { bold: true }), { size, indent, gapAfter: 6 });
         break;
       }
       case "paragraph":
-        layout.paragraph(inlineRuns(t.tokens, fonts), { indent });
+        layout.paragraph(inlineRuns(tok.tokens, fonts), { indent });
         break;
       case "text":
-        layout.paragraph(inlineRuns(t.tokens ?? [t], fonts), { indent, gapAfter: 2 });
+        layout.paragraph(inlineRuns(tok.tokens ?? [t], fonts), { indent, gapAfter: 2 });
         break;
       case "list":
-        t.items.forEach((item, i) => {
-          const bullet = t.ordered ? `${(t.start || 1) + i}. ` : "• ";
+        tok.items.forEach((item, i) => {
+          const bullet = tok.ordered ? `${(tok.start || 1) + i}. ` : "• ";
           const [first, ...rest] = item.tokens;
           const firstRuns = first?.tokens ? inlineRuns(first.tokens, fonts) : [];
           layout.paragraph([{ text: bullet, font: fonts.regular }, ...firstRuns], { indent: indent + 10, gapAfter: 2 });
@@ -329,10 +330,10 @@ function renderBlocks(layout, tokens, fonts, indent = 0) {
         layout.y -= 4;
         break;
       case "code":
-        layout.paragraph([{ text: t.text, font: fonts.mono, color: rgb(0.2, 0.2, 0.25) }], { size: 9.5, indent: indent + 10, lineGap: 1.3 });
+        layout.paragraph([{ text: tok.text, font: fonts.mono, color: rgb(0.2, 0.2, 0.25) }], { size: 9.5, indent: indent + 10, lineGap: 1.3 });
         break;
       case "blockquote":
-        renderBlocks(layout, t.tokens, fonts, indent + 18);
+        renderBlocks(layout, tok.tokens, fonts, indent + 18);
         break;
       case "hr":
         layout.rule();
@@ -342,18 +343,18 @@ function renderBlocks(layout, tokens, fonts, indent = 0) {
           ...(i ? [{ text: "   |   ", font: fonts.regular, color: rgb(0.6, 0.6, 0.65) }] : []),
           ...inlineRuns(c.tokens, fonts, { bold }),
         ]);
-        layout.paragraph(row(t.header, true), { size: 10, indent, gapAfter: 2 });
-        for (const r of t.rows) layout.paragraph(row(r, false), { size: 10, indent, gapAfter: 2 });
+        layout.paragraph(row(tok.header, true), { size: 10, indent, gapAfter: 2 });
+        for (const r of tok.rows) layout.paragraph(row(r, false), { size: 10, indent, gapAfter: 2 });
         layout.y -= 6;
         break;
       }
       case "html":
-        layout.paragraph([{ text: t.text.replace(/<[^>]+>/g, ""), font: fonts.regular }], { indent });
+        layout.paragraph([{ text: tok.text.replace(/<[^>]+>/g, ""), font: fonts.regular }], { indent });
         break;
       case "space":
         break;
       default:
-        if (t.raw?.trim()) layout.paragraph([{ text: t.raw, font: fonts.regular }], { indent });
+        if (tok.raw?.trim()) layout.paragraph([{ text: tok.raw, font: fonts.regular }], { indent });
     }
   }
 }

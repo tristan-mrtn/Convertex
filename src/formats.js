@@ -1,5 +1,6 @@
 // Registre de tous les formats connus par l'extension.
 // Chaque format est un nœud du graphe de conversion.
+import { familyLabel, formatLabelOverride } from "./i18n.js";
 
 export const FAMILIES = {
   image:    { label: "Images",        color: "#4c6ef5" },
@@ -123,10 +124,13 @@ const RAW_FORMATS = [
   ["tgz", "TAR.GZ", ["tgz", "tar.gz"],    "application/gzip",   "archive"],
 ];
 
+// Les libellés de familles suivent la langue du navigateur
+for (const [id, fam] of Object.entries(FAMILIES)) fam.label = familyLabel(id) ?? fam.label;
+
 export const FORMATS = Object.fromEntries(
   RAW_FORMATS.map(([id, label, exts, mime, family]) => [
     id,
-    { id, label, exts, ext: exts[0], mime, family },
+    { id, label: formatLabelOverride(id) ?? label, exts, ext: exts[0], mime, family },
   ])
 );
 

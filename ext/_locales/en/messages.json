@@ -1,0 +1,11 @@
+{
+  "appName": {
+    "message": "Convertex"
+  },
+  "appDesc": {
+    "message": "Convert images, videos, audio, documents, PDFs, spreadsheets and archives across 85 formats, 100% locally in Chrome."
+  },
+  "actionTitle": {
+    "message": "Open Convertex"
+  }
+}

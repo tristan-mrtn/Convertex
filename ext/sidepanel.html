@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,22 +10,22 @@
   <header class="top">
     <div>
       <h1>Convertex</h1>
-      <p class="badge"><span class="dot"></span>100 % local, aucun envoi réseau</p>
+      <p class="badge"><span class="dot"></span><span data-i18n="badge"></span></p>
     </div>
-    <button id="openTab" class="ghost" title="Ouvrir dans un onglet">⤢</button>
+    <button id="openTab" class="ghost" data-i18n-title="openTab">⤢</button>
   </header>
 
   <nav class="tabs" role="tablist">
-    <button role="tab" class="tab active" data-tab="convert">Convertir</button>
-    <button role="tab" class="tab" data-tab="graph">Graphe</button>
+    <button role="tab" class="tab active" data-tab="convert" data-i18n="tabConvert"></button>
+    <button role="tab" class="tab" data-tab="graph" data-i18n="tabGraph"></button>
   </nav>
 
   <main>
     <section id="tab-convert" class="tabpane">
       <label id="dropzone" for="fileInput">
         <span class="drop-icon">⇣</span>
-        <span>Dépose un fichier ici</span>
-        <small>ou clique pour en choisir un</small>
+        <span data-i18n="dropTitle"></span>
+        <small data-i18n="dropHint"></small>
         <input type="file" id="fileInput" hidden>
       </label>
 
@@ -36,10 +36,10 @@
             <div id="fileName" class="file-name"></div>
             <div id="fileSize" class="muted"></div>
           </div>
-          <button id="clearFile" class="ghost" title="Retirer le fichier">✕</button>
+          <button id="clearFile" class="ghost" data-i18n-title="removeFile">✕</button>
         </div>
         <label class="muted small override">
-          Format détecté
+          <span data-i18n="detected"></span>
           <select id="formatOverride"></select>
         </label>
       </div>
@@ -47,7 +47,7 @@
       <div id="targetsCard" class="card" hidden>
         <div class="targets-head">
           <strong id="targetsCount"></strong>
-          <input id="search" type="search" placeholder="Filtrer…" autocomplete="off">
+          <input id="search" type="search" data-i18n-placeholder="filter" autocomplete="off">
         </div>
         <div id="targets"></div>
       </div>
@@ -55,10 +55,10 @@
       <div id="actionCard" class="card" hidden>
         <div id="pathView" class="path"></div>
         <div id="qualityRow" hidden>
-          <label for="quality" class="small">Qualité : <span id="qualityValue">90</span> %</label>
+          <label for="quality" class="small"><span data-i18n="quality"></span> <span id="qualityValue">90</span> %</label>
           <input type="range" id="quality" min="10" max="100" value="90">
         </div>
-        <button id="convertBtn" class="primary">Convertir</button>
+        <button id="convertBtn" class="primary"></button>
         <div id="progress" hidden>
           <div class="bar"><div id="barFill"></div></div>
           <div id="progressText" class="muted small"></div>
@@ -72,7 +72,7 @@
       <p id="graphCaption" class="muted small"></p>
       <div id="graphBox" class="graph-box"></div>
       <div id="legend" class="legend"></div>
-      <p class="muted small">Molette pour zoomer, glisser pour se déplacer une fois zoomé, double-clic pour revenir à la vue complète. Clique un format pour le choisir.</p>
+      <p class="muted small" data-i18n="graphHelp"></p>
     </section>
   </main>
 

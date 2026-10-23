@@ -1,5 +1,6 @@
 // Moteurs qui ont besoin du navigateur : pdf.js (lecture/rendu PDF) et Canvas (SVG).
 import * as pdfjs from "pdfjs-dist/build/pdf.mjs";
+import { t } from "./i18n.js";
 
 const url = (p) => chrome.runtime.getURL(`engines/${p}`);
 pdfjs.GlobalWorkerOptions.workerSrc = url("pdfjs/pdf.worker.mjs");
@@ -33,7 +34,7 @@ export async function runPdfText({ name, bytes }, from, to, options, onProgress)
   }
   const all = pages.join("\n\n");
   if (!all.trim()) {
-    throw new Error("Ce PDF ne contient pas de texte (c'est sans doute un scan ou des images).");
+    throw new Error(t("noPdfText"));
   }
   return [{ name: `${baseName(name)}.txt`, bytes: new TextEncoder().encode(all) }];
 }

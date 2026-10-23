@@ -3,6 +3,7 @@ import { detectFormat } from "./detect.js";
 import { shortestPaths, edgeCount } from "./graph.js";
 import { runPath, ENGINE_LABEL } from "./pipeline.js";
 import { renderRadial, renderOverview, renderLegend } from "./graphview.js";
+import { t, LANG } from "./i18n.js";
 
 const $ = (id) => document.getElementById(id);
 const LOSSY = new Set(["jpg", "webp", "avif", "jxl", "jp2"]);
@@ -10,11 +11,18 @@ const LOSSY = new Set(["jpg", "webp", "avif", "jxl", "jp2"]);
 const state = { file: null, source: null, paths: {}, target: null, busy: false, tab: "convert" };
 
 function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} Ko`;
-  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} Mo`;
-  return `${(bytes / 1024 ** 3).toFixed(2)} Go`;
+  const [b, kb, mb, gb] = t("units");
+  if (bytes < 1024) return `${bytes} ${b}`;
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} ${kb}`;
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} ${mb}`;
+  return `${(bytes / 1024 ** 3).toFixed(2)} ${gb}`;
 }
+
+// Textes fixes de la page, marqués data-i18n dans le HTML
+for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = t(el.dataset.i18n);
+for (const el of document.querySelectorAll("[data-i18n-title]")) el.title = t(el.dataset.i18nTitle);
+for (const el of document.querySelectorAll("[data-i18n-placeholder]")) el.placeholder = t(el.dataset.i18nPlaceholder);
+document.documentElement.lang = LANG;
 
 function setStatus(msg, kind = "") {
   $("status").textContent = msg;
@@ -44,7 +52,7 @@ async function handleFile(file) {
 function fillOverride(detected) {
   const select = $("formatOverride");
   select.textContent = "";
-  if (!detected) select.append(new Option("Inconnu, choisis le format…", ""));
+  if (!detected) select.append(new Option(t("unknownOption"), ""));
   for (const [fam, info] of Object.entries(FAMILIES)) {
     const group = document.createElement("optgroup");
     group.label = info.label;
@@ -65,7 +73,7 @@ function setSource(id) {
     badge.style.background = "var(--muted)";
     $("targetsCard").hidden = true;
     $("actionCard").hidden = true;
-    setStatus("Format non reconnu : choisis-le dans la liste ci-dessus.", "err");
+    setStatus(t("unknownFormat"), "err");
     refreshGraph();
     return;
   }
@@ -90,9 +98,7 @@ function renderTargets() {
     return !filter || f.label.toLowerCase().includes(filter) || f.exts.some((e) => e.includes(filter));
   });
   const total = Object.keys(state.paths).length;
-  $("targetsCount").textContent = total
-    ? `${total} format${total > 1 ? "s" : ""} possible${total > 1 ? "s" : ""}`
-    : "Aucune conversion disponible";
+  $("targetsCount").textContent = total ? t("targetsCount", total) : t("noTargets");
 
   for (const fam of Object.keys(FAMILIES)) {
     const members = ids.filter((id) => FORMATS[id].family === fam)
@@ -116,7 +122,7 @@ function renderTargets() {
       if (hops > 1) {
         const h = document.createElement("span");
         h.className = "hops";
-        h.textContent = `${hops} ét.`;
+        h.textContent = t("hops", hops);
         chip.append(h);
       }
       chip.addEventListener("click", () => selectTarget(id));
@@ -134,7 +140,7 @@ function selectTarget(id) {
   renderPath();
   $("actionCard").hidden = false;
   $("qualityRow").hidden = !LOSSY.has(id);
-  $("convertBtn").textContent = `Convertir en ${FORMATS[id].ext.toUpperCase()}`;
+  $("convertBtn").textContent = t("convertTo", FORMATS[id].ext.toUpperCase());
   setStatus("");
   refreshGraph();
 }
@@ -188,20 +194,19 @@ async function convert() {
     }, ({ step, steps, edge, ratio }) => {
       const overall = (step + Math.min(1, ratio)) / steps;
       $("barFill").style.width = `${Math.round(overall * 100)}%`;
-      const firstLoad = ["ffmpeg", "pandoc", "magick"].includes(edge.engine) && ratio === 0
-        ? " (premier chargement du moteur, quelques secondes)" : "";
-      $("progressText").textContent =
-        `Étape ${step + 1}/${steps} : ${FORMATS[edge.from].ext.toUpperCase()} → ${FORMATS[edge.to].ext.toUpperCase()} avec ${ENGINE_LABEL[edge.engine]}${firstLoad}`;
+      const firstLoad = ["ffmpeg", "pandoc", "magick"].includes(edge.engine) && ratio === 0 ? t("firstLoad") : "";
+      $("progressText").textContent = t("step", step + 1, steps, FORMATS[edge.from].ext.toUpperCase(),
+        FORMATS[edge.to].ext.toUpperCase(), ENGINE_LABEL[edge.engine]) + firstLoad;
     });
     const isZip = result.name.endsWith(".zip");
     download(result.bytes, result.name, isZip ? "application/zip" : FORMATS[state.target].mime);
     const secs = ((performance.now() - started) / 1000).toFixed(1);
     setStatus(isZip
-      ? `Terminé en ${secs} s : ${result.count} fichiers regroupés dans ${result.name} (${formatSize(result.bytes.length)}).`
-      : `Terminé en ${secs} s : ${result.name} (${formatSize(result.bytes.length)}).`, "ok");
+      ? t("doneZip", secs, result.count, result.name, formatSize(result.bytes.length))
+      : t("done", secs, result.name, formatSize(result.bytes.length)), "ok");
   } catch (err) {
     console.error(err);
-    setStatus(err.message || "La conversion a échoué.", "err");
+    setStatus(err.message || t("failed"), "err");
   } finally {
     state.busy = false;
     $("convertBtn").disabled = false;
@@ -217,13 +222,11 @@ function refreshGraph() {
   const box = $("graphBox");
   if (state.source && Object.keys(state.paths).length) {
     const n = Object.keys(state.paths).length;
-    $("graphCaption").textContent =
-      `${FORMATS[state.source].label} au centre. Chaque anneau correspond à une étape de conversion de plus (${n} formats atteignables).`;
+    $("graphCaption").textContent = t("radialCaption", FORMATS[state.source].label, n);
     renderRadial(box, state.source, state.paths, state.target, (id) => selectTarget(id));
     renderLegend($("legend"), new Set([state.source, ...Object.keys(state.paths)].map((id) => FORMATS[id].family)));
   } else {
-    $("graphCaption").textContent =
-      `Vue d'ensemble : ${Object.keys(FORMATS).length} formats et ${edgeCount()} conversions directes. Dépose un fichier pour voir ses chemins.`;
+    $("graphCaption").textContent = t("overviewCaption", Object.keys(FORMATS).length, edgeCount());
     renderOverview(box);
     renderLegend($("legend"));
   }

@@ -5,6 +5,7 @@
 import { zipSync } from "fflate";
 import { runSheet, runTree, runArchive, runPdfWrite } from "./engines-main.js";
 import { runPdfText, runPdfRender, runCanvas } from "./engines-browser.js";
+import { t } from "./i18n.js";
 
 let worker = null;
 let nextId = 1;
@@ -24,7 +25,7 @@ function getWorker() {
       }
     };
     worker.onerror = (e) => {
-      for (const job of pending.values()) job.reject(new Error(e.message || "Le moteur a planté."));
+      for (const job of pending.values()) job.reject(new Error(e.message || t("engineCrashed")));
       pending.clear();
       worker = null;
     };
@@ -62,7 +63,7 @@ async function runStep(edge, item, options, onProgress) {
 // Libellé lisible de chaque moteur, pour l'affichage du chemin
 export const ENGINE_LABEL = {
   magick: "ImageMagick", ffmpeg: "ffmpeg", pandoc: "Pandoc", sheet: "SheetJS",
-  tree: "Analyseur", archive: "fflate", pdfwrite: "pdf-lib", pdftext: "pdf.js",
+  tree: t("parser"), archive: "fflate", pdfwrite: "pdf-lib", pdftext: "pdf.js",
   pdfrender: "pdf.js", canvas: "Canvas",
 };
 

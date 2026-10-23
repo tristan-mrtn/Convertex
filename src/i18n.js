@@ -1,0 +1,101 @@
+// Traductions de l'interface. L'anglais est la langue par défaut,
+// le français est utilisé quand le navigateur est en français.
+
+export const LANG = (globalThis.navigator?.language ?? "en").toLowerCase().startsWith("fr") ? "fr" : "en";
+
+const STRINGS = {
+  en: {
+    badge: "100% local, nothing sent over the network",
+    openTab: "Open in a tab",
+    tabConvert: "Convert",
+    tabGraph: "Graph",
+    dropTitle: "Drop a file here",
+    dropHint: "or click to choose one",
+    removeFile: "Remove file",
+    detected: "Detected format",
+    filter: "Filter…",
+    quality: "Quality:",
+    graphHelp: "Scroll to zoom, drag to move once zoomed, double-click to reset the view. Click a format to choose it.",
+    unknownOption: "Unknown, pick the format…",
+    unknownFormat: "Unrecognized format: pick it from the list above.",
+    targetsCount: (n) => (n === 1 ? "1 possible format" : `${n} possible formats`),
+    noTargets: "No conversion available",
+    hops: (n) => `${n} hops`,
+    convertTo: (ext) => `Convert to ${ext}`,
+    step: (i, n, from, to, engine) => `Step ${i}/${n}: ${from} → ${to} with ${engine}`,
+    firstLoad: " (loading the engine for the first time, a few seconds)",
+    doneZip: (s, count, name, size) => `Done in ${s} s: ${count} files bundled in ${name} (${size}).`,
+    done: (s, name, size) => `Done in ${s} s: ${name} (${size}).`,
+    failed: "The conversion failed.",
+    radialCaption: (label, n) => `${label} in the center. Each ring is one more conversion step (${n} reachable formats).`,
+    overviewCaption: (f, e) => `Overview: ${f} formats and ${e} direct conversions. Drop a file to see its paths.`,
+    radialAria: (label) => `Conversions available from ${label}`,
+    overviewAria: "Full conversion graph",
+    stepsTooltip: (label, n) => `${label} (${n} step${n > 1 ? "s" : ""})`,
+    engineCrashed: "The engine crashed.",
+    parser: "Parser",
+    notTable: "This JSON is not an array: it can't become a spreadsheet.",
+    noPdfText: "This PDF contains no text (it's probably a scan or images).",
+    imagePlaceholder: (alt) => `[image: ${alt}]`,
+    noOutput: "no output",
+    ffmpegFailed: "ffmpeg failed",
+    units: ["B", "KB", "MB", "GB"],
+  },
+  fr: {
+    badge: "100 % local, aucun envoi réseau",
+    openTab: "Ouvrir dans un onglet",
+    tabConvert: "Convertir",
+    tabGraph: "Graphe",
+    dropTitle: "Dépose un fichier ici",
+    dropHint: "ou clique pour en choisir un",
+    removeFile: "Retirer le fichier",
+    detected: "Format détecté",
+    filter: "Filtrer…",
+    quality: "Qualité :",
+    graphHelp: "Molette pour zoomer, glisser pour se déplacer une fois zoomé, double-clic pour revenir à la vue complète. Clique un format pour le choisir.",
+    unknownOption: "Inconnu, choisis le format…",
+    unknownFormat: "Format non reconnu : choisis-le dans la liste ci-dessus.",
+    targetsCount: (n) => (n === 1 ? "1 format possible" : `${n} formats possibles`),
+    noTargets: "Aucune conversion disponible",
+    hops: (n) => `${n} ét.`,
+    convertTo: (ext) => `Convertir en ${ext}`,
+    step: (i, n, from, to, engine) => `Étape ${i}/${n} : ${from} → ${to} avec ${engine}`,
+    firstLoad: " (premier chargement du moteur, quelques secondes)",
+    doneZip: (s, count, name, size) => `Terminé en ${s} s : ${count} fichiers regroupés dans ${name} (${size}).`,
+    done: (s, name, size) => `Terminé en ${s} s : ${name} (${size}).`,
+    failed: "La conversion a échoué.",
+    radialCaption: (label, n) => `${label} au centre. Chaque anneau correspond à une étape de conversion de plus (${n} formats atteignables).`,
+    overviewCaption: (f, e) => `Vue d'ensemble : ${f} formats et ${e} conversions directes. Dépose un fichier pour voir ses chemins.`,
+    radialAria: (label) => `Conversions possibles depuis ${label}`,
+    overviewAria: "Graphe complet des conversions",
+    stepsTooltip: (label, n) => `${label} (${n} étape${n > 1 ? "s" : ""})`,
+    engineCrashed: "Le moteur a planté.",
+    parser: "Analyseur",
+    notTable: "Ce JSON n'est pas un tableau : impossible d'en faire un tableur.",
+    noPdfText: "Ce PDF ne contient pas de texte (c'est sans doute un scan ou des images).",
+    imagePlaceholder: (alt) => `[image : ${alt}]`,
+    noOutput: "aucune sortie",
+    ffmpegFailed: "ffmpeg a échoué",
+    units: ["o", "Ko", "Mo", "Go"],
+  },
+};
+
+export function t(key, ...args) {
+  const value = STRINGS[LANG][key] ?? STRINGS.en[key];
+  return typeof value === "function" ? value(...args) : value;
+}
+
+// Libellés de familles et de formats qui changent selon la langue
+const FAMILY_LABELS = {
+  en: { image: "Images", raw: "RAW photos", video: "Video", audio: "Audio", subtitle: "Subtitles",
+    document: "Documents", ebook: "E-books", slides: "Slides", pdf: "PDF", data: "Data", archive: "Archives" },
+  fr: { image: "Images", raw: "Photos RAW", video: "Vidéo", audio: "Audio", subtitle: "Sous-titres",
+    document: "Documents", ebook: "Livres num.", slides: "Présentations", pdf: "PDF", data: "Données", archive: "Archives" },
+};
+const FORMAT_LABELS = {
+  en: { txt: "Plain text", xcf: "XCF (GIMP)" },
+  fr: { txt: "Texte brut", xcf: "XCF (GIMP)" },
+};
+
+export const familyLabel = (id) => FAMILY_LABELS[LANG][id];
+export const formatLabelOverride = (id) => FORMAT_LABELS[LANG][id];
