@@ -50,6 +50,8 @@ Les trois gros moteurs ne sont chargés qu'au premier besoin, dans un Web Worker
 
 ## Confidentialité
 
+Convertex ne collecte, ne stocke et ne transmet aucune donnée. Les fichiers sont traités uniquement dans le navigateur de l'utilisateur.
+
 La politique de sécurité du manifest contient `connect-src 'self'` : Chrome bloque toute requête vers un autre domaine que l'extension elle-même. L'extension ne demande aucune permission d'accès aux sites. Tous les moteurs et polices sont embarqués, rien n'est téléchargé depuis un CDN.
 
 ## Installation

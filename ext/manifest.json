@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Convertex",
   "version": "0.2.0",
-  "description": "Convertit images, vidéos, audio, documents, PDF, données et archives directement dans Chrome. Aucun fichier ne quitte votre ordinateur.",
+  "description": "Convertit images, vidéos, audio, documents, PDF, tableurs et archives entre 85 formats, 100 % en local dans Chrome.",
   "minimum_chrome_version": "116",
   "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" },
   "action": {
