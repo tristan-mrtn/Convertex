@@ -1,11 +1,14 @@
 {
   "appName": {
-    "message": "Convertex"
+    "message": "Convertex : convertisseur de fichiers privé"
   },
   "appDesc": {
     "message": "Convertissez vos fichiers dans d'autres formats directement dans le navigateur. Rien n'est jamais envoyé en ligne."
   },
   "actionTitle": {
     "message": "Ouvrir Convertex"
+  },
+  "shortName": {
+    "message": "Convertex"
   }
 }

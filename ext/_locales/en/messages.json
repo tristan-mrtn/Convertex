@@ -1,11 +1,14 @@
 {
   "appName": {
-    "message": "Convertex"
+    "message": "Convertex: Private File Converter"
   },
   "appDesc": {
     "message": "Convert files to other formats right in your browser. Private by design: nothing is ever uploaded."
   },
   "actionTitle": {
     "message": "Open Convertex"
+  },
+  "shortName": {
+    "message": "Convertex"
   }
 }
