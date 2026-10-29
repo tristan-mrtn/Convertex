@@ -273,3 +273,17 @@ $("clearFile").addEventListener("click", () => {
 });
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
 $("openTab").addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL("sidepanel.html") }));
+
+// Page de bienvenue, ouverte une seule fois après l'installation
+if (new URLSearchParams(location.search).has("welcome")) {
+  $("welcome").hidden = false;
+  $("openTab").hidden = true;
+  $("openPanel").addEventListener("click", async () => {
+    try {
+      const win = await chrome.windows.getCurrent();
+      await chrome.sidePanel.open({ windowId: win.id });
+    } catch (err) {
+      console.error(err);
+    }
+  });
+}

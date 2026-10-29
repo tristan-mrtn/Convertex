@@ -151,3 +151,13 @@ input[type="range"] { width: 100%; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 10px 0 4px; font-size: .78rem; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+.welcome {
+  margin-top: 12px; padding: 16px; border-radius: 12px;
+  background: var(--accent-soft); border: 1px solid var(--accent);
+}
+.welcome h2 { margin: 0 0 8px; font-size: 1.05rem; color: var(--accent); }
+.welcome ol { margin: 0 0 12px; padding-left: 20px; }
+.welcome li { margin-bottom: 4px; }
+.welcome .primary { width: auto; padding: 9px 16px; }
+.welcome p { margin: 10px 0 0; }

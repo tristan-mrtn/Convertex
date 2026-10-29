@@ -41,6 +41,12 @@ const STRINGS = {
     ffmpegFailed: "ffmpeg failed",
     noStream: "This file has no track of that kind (for example, no audio in this video).",
     units: ["B", "KB", "MB", "GB"],
+    welcomeTitle: "Convertex is installed",
+    welcomeStep1: "Click the puzzle icon at the top right of Chrome, then the pin next to Convertex.",
+    welcomeStep2: "Click the Convertex icon: the side panel opens.",
+    welcomeStep3: "Drop a file in the panel and pick the format you want.",
+    welcomeOpenPanel: "Open the side panel now",
+    welcomeTryHere: "You can also try it right here: drop a file below.",
   },
   fr: {
     badge: "100 % local, aucun envoi réseau",
@@ -79,6 +85,12 @@ const STRINGS = {
     ffmpegFailed: "ffmpeg a échoué",
     noStream: "Ce fichier n'a pas de piste de ce type (par exemple, pas de son dans cette vidéo).",
     units: ["o", "Ko", "Mo", "Go"],
+    welcomeTitle: "Convertex est installé",
+    welcomeStep1: "Clique sur l'icône puzzle en haut à droite de Chrome, puis sur l'épingle à côté de Convertex.",
+    welcomeStep2: "Clique sur l'icône Convertex : le panneau latéral s'ouvre.",
+    welcomeStep3: "Dépose un fichier dans le panneau et choisis le format voulu.",
+    welcomeOpenPanel: "Ouvrir le panneau latéral maintenant",
+    welcomeTryHere: "Tu peux aussi l'essayer ici : dépose un fichier juste en dessous.",
   },
 };
 
