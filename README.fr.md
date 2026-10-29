@@ -1,8 +1,23 @@
 # Convertex
 
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/eemhkdhchanmcoejnmfpgilajfngdjad?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/eemhkdhchanmcoejnmfpgilajfngdjad?utm_source=github)
+[![Users](https://img.shields.io/chrome-web-store/users/eemhkdhchanmcoejnmfpgilajfngdjad?label=users)](https://chromewebstore.google.com/detail/eemhkdhchanmcoejnmfpgilajfngdjad?utm_source=github)
+[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+
 [English](README.md) | **Français**
 
+**[Installer Convertex depuis le Chrome Web Store](https://chromewebstore.google.com/detail/eemhkdhchanmcoejnmfpgilajfngdjad?utm_source=github)**
+
+<p align="center"><img src="docs/demo.gif" alt="Conversion d'un document Word en PDF avec Convertex" width="360"></p>
+
 Convertex (convert + vertex, un sommet de graphe) est une extension Chrome qui convertit un fichier vers tous les formats atteignables parmi 85, directement dans le navigateur. Aucun fichier ne quitte l'ordinateur : pas de serveur, pas d'API, tout tourne en WebAssembly.
+
+## Captures d'écran
+
+<p align="center">
+  <img src="docs/convert.png" alt="Tous les formats possibles pour un fichier" width="49%">
+  <img src="docs/graph.png" alt="Le graphe de conversion" width="49%">
+</p>
 
 ## Fonctionnement
 
@@ -59,6 +74,10 @@ Convertex ne collecte, ne stocke et ne transmet aucune donnée. Les fichiers son
 La politique de sécurité du manifest contient `connect-src 'self'` : Chrome bloque toute requête vers un autre domaine que l'extension elle-même. L'extension ne demande aucune permission d'accès aux sites. Tous les moteurs et polices sont embarqués, rien n'est téléchargé depuis un CDN.
 
 ## Installation
+
+Le plus simple est de passer par le [Chrome Web Store](https://chromewebstore.google.com/detail/eemhkdhchanmcoejnmfpgilajfngdjad?utm_source=github).
+
+Pour la compiler depuis le code source :
 
 ```bash
 npm install
