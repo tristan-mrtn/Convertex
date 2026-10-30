@@ -78,6 +78,16 @@ const PANDOC_WRITER = {
 const BINARY_IO = new Set(["docx", "odt", "epub", "pptx"]);
 const STANDALONE = new Set(["html", "tex", "typ", "rtf", "dbk", "fb2", "ipynb"]);
 
+// Texte brut lu par le lecteur Markdown : tous les caractères qui ont un sens en
+// Markdown sont échappés (un « * » ou un « $ » restent des caractères).
+function plainToMarkdown(text) {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/^[ \t]+/, "").replace(/[\\`*_{}[\]()#+\-.!|<>$~^&=:@%"']/g, "\\$&"))
+    .join("\n");
+}
+
 async function runPandoc({ bytes, from, to, name }) {
   const pandoc = await loadPandoc();
   const options = {
@@ -88,6 +98,8 @@ async function runPandoc({ bytes, from, to, name }) {
   };
   delete options.metadata.title;
   if (to === "html") options["embed-resources"] = true;
+  // formules : MathML, que les navigateurs et les liseuses affichent sans script
+  if (to === "html" || to === "epub") options["html-math-method"] = { method: "mathml" };
 
   const files = {};
   let stdin = null;
@@ -97,6 +109,7 @@ async function runPandoc({ bytes, from, to, name }) {
     options["input-files"] = [inName];
   } else {
     stdin = new TextDecoder().decode(bytes);
+    if (from === "txt") stdin = plainToMarkdown(stdin);
   }
   const outName = `sortie.${to}`;
   if (BINARY_IO.has(to)) options["output-file"] = outName;
@@ -108,7 +121,10 @@ async function runPandoc({ bytes, from, to, name }) {
     return new Uint8Array(await out.arrayBuffer());
   }
   if (!result.stdout && result.stderr) throw new Error(`Pandoc: ${result.stderr}`);
-  return new TextEncoder().encode(result.stdout);
+  let out = result.stdout;
+  // l'annotation TeX des formules MathML n'est pas affichée par tous les lecteurs
+  if (to === "html") out = out.replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, "").replace(/<\/?semantics>/g, "");
+  return new TextEncoder().encode(out);
 }
 
 /* ---------------- ffmpeg ---------------- */
