@@ -73,6 +73,19 @@ Convertex ne collecte, ne stocke et ne transmet aucune donnée. Les fichiers son
 
 La politique de sécurité du manifest contient `connect-src 'self'` : Chrome bloque toute requête vers un autre domaine que l'extension elle-même. L'extension ne demande aucune permission d'accès aux sites. Tous les moteurs et polices sont embarqués, rien n'est téléchargé depuis un CDN.
 
+## Sécurité
+
+Les fichiers déposés dans Convertex sont traités comme non fiables :
+
+- Les moteurs tournent en WebAssembly dans un Web Worker séparé, avec un système de fichiers virtuel : ils ne peuvent ni lire ton disque ni accéder au réseau.
+- La politique de sécurité de l'extension n'autorise que ses propres scripts, et l'interface n'insère jamais de HTML venant d'un fichier. Les scripts contenus dans un SVG, un PDF ou un Markdown ne sont jamais exécutés.
+- Le HTML produit par une conversion est nettoyé avec [DOMPurify](https://github.com/cure53/DOMPurify) : scripts, gestionnaires d'événements et liens `javascript:` sont retirés, pour qu'un document piégé ne donne pas une page qui exécute du code.
+- Les chemins dans les archives sont nettoyés (pas de `..`, pas de chemin absolu), pour qu'une archive ne puisse pas faire écrire un outil d'extraction hors de son dossier.
+- Les archives sont limitées à 500 Mo une fois décompressées, et la limite s'applique pendant la décompression, ce qui arrête les bombes de décompression.
+- Un bouton Annuler arrête immédiatement le moteur si un fichier le bloque.
+
+Une faille de sécurité ? Ouvre une issue : https://github.com/tristan-mrtn/Convertex/issues
+
 ## Installation
 
 Le plus simple est de passer par le [Chrome Web Store](https://chromewebstore.google.com/detail/eemhkdhchanmcoejnmfpgilajfngdjad?utm_source=github).
@@ -100,6 +113,7 @@ src/
   graphview.js       dessin SVG du graphe (zoom, déplacement)
   ui.js              panneau latéral
   i18n.js            textes de l'interface en anglais et en français
+  sanitize.js        retire le code actif des HTML produits
 ext/                 extension prête à charger (après le build)
 build.mjs            bundle esbuild et copie des moteurs
 ```

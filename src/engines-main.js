@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import * as yaml from "js-yaml";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import { XMLParser, XMLBuilder } from "fast-xml-parser";
-import { zipSync, unzipSync, gzipSync, gunzipSync } from "fflate";
+import { zipSync, gzipSync, Gunzip, Unzip, UnzipInflate } from "fflate";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { marked } from "marked";
@@ -177,14 +177,104 @@ function writeTar(entries) {
   return out;
 }
 
+/* Sécurité des archives :
+   - les chemins sont nettoyés (pas de "..", pas de chemin absolu ni de lettre de
+     lecteur), sinon un outil d'extraction pourrait écrire hors du dossier prévu ;
+   - la taille décompressée est plafonnée pendant la décompression elle-même,
+     ce qui arrête les bombes de décompression même si l'archive ment sur ses tailles. */
+export const MAX_UNPACKED = 500 * 1024 ** 2; // 500 Mo
+
+export function sanitizePath(path) {
+  const parts = String(path)
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((part) => part.replace(/[\x00-\x1f]/g, "").trim())
+    .filter((part) => part && part !== "." && part !== ".." && !/^[A-Za-z]:$/.test(part));
+  return parts.join("/") || "file";
+}
+
+function uniquePaths(entries) {
+  const seen = new Set();
+  return entries.map((e) => {
+    let path = sanitizePath(e.path);
+    if (seen.has(path)) {
+      const dot = path.lastIndexOf(".");
+      const [stem, ext] = dot > path.lastIndexOf("/") ? [path.slice(0, dot), path.slice(dot)] : [path, ""];
+      let i = 1;
+      while (seen.has(`${stem}-${i}${ext}`)) i++;
+      path = `${stem}-${i}${ext}`;
+    }
+    seen.add(path);
+    return { path, bytes: e.bytes };
+  });
+}
+
+function concat(chunks, total) {
+  const out = new Uint8Array(total);
+  let o = 0;
+  for (const c of chunks) { out.set(c, o); o += c.length; }
+  return out;
+}
+
+function tooBig() {
+  return new Error(t("archiveTooBig"));
+}
+
+// On fournit l'archive par petits morceaux : chaque morceau de 64 Ko ne peut
+// produire qu'une quantité bornée de données, donc la limite agit tout de suite.
+function pushInSlices(stream, bytes, shouldStop) {
+  const SLICE = 64 * 1024;
+  if (bytes.length === 0) { stream.push(bytes, true); return; }
+  for (let o = 0; o < bytes.length; o += SLICE) {
+    stream.push(bytes.subarray(o, o + SLICE), o + SLICE >= bytes.length);
+    if (shouldStop()) return;
+  }
+}
+
+function unzipLimited(bytes) {
+  const files = [];
+  let total = 0;
+  let error = null;
+  const unzip = new Unzip((file) => {
+    if (file.name.endsWith("/")) return;
+    const chunks = [];
+    let size = 0;
+    file.ondata = (err, chunk, final) => {
+      if (error) return;
+      if (err) { error = err; return; }
+      size += chunk.length;
+      total += chunk.length;
+      if (total > MAX_UNPACKED) { error = tooBig(); file.terminate(); return; }
+      chunks.push(chunk);
+      if (final) files.push({ path: file.name, bytes: concat(chunks, size) });
+    };
+    file.start();
+  });
+  unzip.register(UnzipInflate);
+  pushInSlices(unzip, bytes, () => error);
+  if (error) throw error;
+  return files;
+}
+
+function gunzipLimited(bytes) {
+  const chunks = [];
+  let total = 0;
+  const gz = new Gunzip((chunk) => {
+    total += chunk.length;
+    // Lever l'erreur ici interrompt immédiatement la décompression
+    if (total > MAX_UNPACKED) throw tooBig();
+    chunks.push(chunk);
+  });
+  pushInSlices(gz, bytes, () => false);
+  return concat(chunks, total);
+}
+
 export function runArchive({ name, bytes }, from, to) {
   let entries;
-  if (from === "zip") {
-    entries = Object.entries(unzipSync(bytes))
-      .filter(([path]) => !path.endsWith("/"))
-      .map(([path, b]) => ({ path, bytes: b }));
-  } else if (from === "tar") entries = readTar(bytes);
-  else entries = readTar(gunzipSync(bytes));
+  if (from === "zip") entries = unzipLimited(bytes);
+  else if (from === "tar") entries = readTar(bytes);
+  else entries = readTar(gunzipLimited(bytes));
+  entries = uniquePaths(entries);
 
   let out;
   if (to === "zip") out = zipSync(Object.fromEntries(entries.map((e) => [e.path, e.bytes])));

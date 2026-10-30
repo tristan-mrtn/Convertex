@@ -10,6 +10,7 @@
     "@ffmpeg/core": "^0.12.10",
     "@imagemagick/magick-wasm": "^0.0.45",
     "@pdf-lib/fontkit": "^1.1.1",
+    "dompurify": "^3.4.17",
     "fast-xml-parser": "^5.11.2",
     "fflate": "^0.8.3",
     "js-yaml": "^5.5.0",

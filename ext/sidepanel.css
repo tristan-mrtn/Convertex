@@ -161,3 +161,8 @@ input[type="range"] { width: 100%; }
 .welcome li { margin-bottom: 4px; }
 .welcome .primary { width: auto; padding: 9px 16px; }
 .welcome p { margin: 10px 0 0; }
+
+.progress-row { display: flex; align-items: center; gap: 10px; }
+.progress-row .bar { flex: 1; }
+#cancelBtn { border-color: var(--border); flex-shrink: 0; padding: 3px 10px; }
+#progressText { margin-top: 6px; }

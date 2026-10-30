@@ -73,6 +73,19 @@ Convertex does not collect, store or transmit any data. Files are processed only
 
 The manifest's security policy contains `connect-src 'self'`: Chrome blocks any request to a domain other than the extension itself. The extension asks for no access to websites. All engines and fonts are bundled, nothing is downloaded from a CDN.
 
+## Security
+
+Files dropped into Convertex are treated as untrusted:
+
+- The engines run as WebAssembly inside a separate Web Worker, with a virtual file system: they can't read your disk or reach the network.
+- The extension's security policy only allows its own scripts, and the interface never inserts HTML coming from a file. Scripts inside SVG, PDF or Markdown files are never executed.
+- HTML produced by a conversion is cleaned with [DOMPurify](https://github.com/cure53/DOMPurify): scripts, event handlers and `javascript:` links are removed, so a trapped document can't give you a page that runs code.
+- Paths inside archives are cleaned (no `..`, no absolute paths), so an archive can't make an extraction tool write outside its folder.
+- Archives are limited to 500 MB once decompressed, and the limit applies during decompression, which stops decompression bombs.
+- A Cancel button stops the engine at once if a file keeps it busy.
+
+Found a security issue? Please open an issue: https://github.com/tristan-mrtn/Convertex/issues
+
 ## Install
 
 The easiest way is the [Chrome Web Store](https://chromewebstore.google.com/detail/eemhkdhchanmcoejnmfpgilajfngdjad?utm_source=github).
@@ -100,6 +113,7 @@ src/
   graphview.js       SVG drawing of the graph (zoom, pan)
   ui.js              side panel
   i18n.js            interface strings in English and French
+  sanitize.js        removes active content from HTML output
 ext/                 extension ready to load (after the build)
 build.mjs            esbuild bundle and engine copy
 ```

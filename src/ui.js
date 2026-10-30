@@ -1,7 +1,7 @@
 import { FORMATS, FAMILIES } from "./formats.js";
 import { detectFormat } from "./detect.js";
 import { shortestPaths, edgeCount } from "./graph.js";
-import { runPath, ENGINE_LABEL } from "./pipeline.js";
+import { runPath, cancelRun, ENGINE_LABEL } from "./pipeline.js";
 import { renderRadial, renderOverview, renderLegend } from "./graphview.js";
 import { t, LANG } from "./i18n.js";
 
@@ -205,8 +205,11 @@ async function convert() {
       ? t("doneZip", secs, result.count, result.name, formatSize(result.bytes.length))
       : t("done", secs, result.name, formatSize(result.bytes.length)), "ok");
   } catch (err) {
-    console.error(err);
-    setStatus(err.message || t("failed"), "err");
+    if (err?.cancelled) setStatus(t("cancelled"));
+    else {
+      console.error(err);
+      setStatus(err.message || t("failed"), "err");
+    }
   } finally {
     state.busy = false;
     $("convertBtn").disabled = false;
@@ -263,6 +266,7 @@ $("formatOverride").addEventListener("change", (e) => setSource(e.target.value |
 $("search").addEventListener("input", renderTargets);
 $("quality").addEventListener("input", () => { $("qualityValue").textContent = $("quality").value; });
 $("convertBtn").addEventListener("click", convert);
+$("cancelBtn").addEventListener("click", cancelRun);
 $("clearFile").addEventListener("click", () => {
   if (state.busy) return;
   Object.assign(state, { file: null, source: null, paths: {}, target: null });

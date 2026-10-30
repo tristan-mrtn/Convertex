@@ -6,6 +6,7 @@ import { zipSync } from "fflate";
 import { runSheet, runTree, runArchive, runPdfWrite } from "./engines-main.js";
 import { runPdfText, runPdfRender, runCanvas } from "./engines-browser.js";
 import { t } from "./i18n.js";
+import { sanitizeHtml } from "./sanitize.js";
 
 let worker = null;
 let nextId = 1;
@@ -56,8 +57,32 @@ const MAIN = {
 };
 
 async function runStep(edge, item, options, onProgress) {
-  if (MAIN[edge.engine]) return MAIN[edge.engine](item, edge.from, edge.to, options, onProgress);
-  return inWorker(edge.engine, item, edge.from, edge.to, options, onProgress);
+  const out = MAIN[edge.engine]
+    ? await MAIN[edge.engine](item, edge.from, edge.to, options, onProgress)
+    : await inWorker(edge.engine, item, edge.from, edge.to, options, onProgress);
+  // Une page HTML produite ne doit contenir aucun code actif
+  if (edge.to === "html") return out.map((it) => ({ ...it, bytes: sanitizeHtml(it.bytes) }));
+  return out;
+}
+
+/* ---------------- Annulation ---------------- */
+
+let cancelled = false;
+
+function cancelError() {
+  const err = new Error(t("cancelled"));
+  err.cancelled = true;
+  return err;
+}
+
+// Arrête la conversion en cours : le worker est détruit, ce qui stoppe net
+// un moteur bloqué sur un fichier piégé.
+export function cancelRun() {
+  cancelled = true;
+  for (const job of pending.values()) job.reject(cancelError());
+  pending.clear();
+  worker?.terminate();
+  worker = null;
 }
 
 // Libellé lisible de chaque moteur, pour l'affichage du chemin
@@ -68,17 +93,20 @@ export const ENGINE_LABEL = {
 };
 
 export async function runPath(file, path, options, onStatus) {
+  cancelled = false;
   let items = [{ name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }];
   for (let s = 0; s < path.length; s++) {
     const edge = path[s];
     const next = [];
     for (let i = 0; i < items.length; i++) {
+      if (cancelled) throw cancelError();
       const report = (ratio) => onStatus({ step: s, steps: path.length, edge, ratio: (i + (ratio ?? 0)) / items.length });
       report(0);
       next.push(...(await runStep(edge, items[i], options, report)));
     }
     items = next;
   }
+  if (cancelled) throw cancelError();
   if (items.length === 1) return items[0];
   // Plusieurs fichiers en sortie : on les regroupe dans un ZIP
   const base = file.name.replace(/\.[^.]+$/, "");
