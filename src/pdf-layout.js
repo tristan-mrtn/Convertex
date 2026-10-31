@@ -294,9 +294,13 @@ function fixText(s, fi) {
 const T1_HIGH = [..."ĂĄĆČĎĚĘĞĹĽŁŃŇŊŐŔŘŚŠŞŤŢŰŮŸŹŽŻĲİđ§"];
 const TS1_HIGH = [..."˘ˇ˝ †‡‖‰•℃$¢ƒ₡₩₦₲₱₤℞‽ ₫™‱¶฿№ ℮◦℠"];
 
+// Code 32 d'une police CMEX (\Biggl( ) : caractère privé pendant l'analyse
+const CMEX_SPACE = "\uf720";
+
 // Atome mathématique : texte brut, code TeX et rôle.
 function mathGlyph(ch, fi, a) {
   let cp = ch.codePointAt(0);
+  if (ch === CMEX_SPACE && fi.cls === "ex") cp = 0x20;
   if (PUA_CMEX[cp] != null) {
     cp = PUA_CMEX[cp];
     if (fi.cls !== "ex") {
@@ -384,6 +388,44 @@ const WORD_RE = /-(?=\p{L})[\p{L}\p{M}\p{N}'’\-]*|[\p{L}\p{M}'’][\p{L}\p{M}\
 // l'élément qui les précède sur la même ligne.
 function withGlyphs(items, glyphs) {
   if (!glyphs?.length) return items;
+  // Texte des polices d'extension : chaque caractère reprend le code d'origine du
+  // glyphe dessiné au même endroit (lmodern donne « ∫ » là où CMEX donne « Z »,
+  // le code de la grande intégrale)
+  const byFont = new Map();
+  glyphs.forEach((g, k) => {
+    if (!g.cmex) return;
+    if (!byFont.has(g.fontName)) byFont.set(g.fontName, []);
+    byFont.get(g.fontName).push({ g, k });
+  });
+  const used = new Set();
+  // le code 32 (grande parenthèse de CMEX) ne doit pas passer pour une espace
+  const rawChar = (g) => (g.str === " " ? CMEX_SPACE : g.str);
+  items = items.map((it) => {
+    const list = byFont.get(it.fontName);
+    if (!list || !it.str) return it;
+    const [, , , d, x, y] = it.transform;
+    const size = Math.abs(d) || 1;
+    // glyphes qui commencent dans l'élément (pas celui qui suit, collé à sa fin) ;
+    // une « espace » ne peut être que le code 32
+    const end = x + Math.max((it.width || 0) - 0.05 * size, 0.05 * size);
+    const blank = !it.str.trim();
+    const cands = list.filter(({ g, k }) => !used.has(k) && Math.abs(g.y - y) < 0.05 * size
+      && g.x > x - 0.05 * size && g.x < end && (!blank || g.str === " ")).sort((a, b) => a.g.x - b.g.x);
+    const chars = [...it.str];
+    let str;
+    let j = 0;
+    if (cands.length === chars.length) {
+      str = cands.map(({ g }) => rawChar(g)).join("");
+      j = cands.length;
+    } else if (cands.length >= chars.filter((c) => c !== " ").length) {
+      // pdf.js a ajouté des espaces entre les glyphes : elles restent des espaces
+      str = chars.map((c) => (c === " " ? c : rawChar(cands[j++].g))).join("");
+    } else return it;
+    for (const { k } of cands.slice(0, j)) used.add(k);
+    return { ...it, str };
+  });
+  // glyphes que getTextContent omet : codes 9 à 13, qui ressemblent à des blancs
+  glyphs = glyphs.filter((g, k) => !used.has(k) && /^[\t\n\v\f\r]$/.test(g.str));
   const out = items.map((it, i) => ({ ...it, order: i }));
   for (const g of glyphs) {
     let after = -1;
@@ -583,13 +625,16 @@ export function extractGraphics(opList, OPS, getFont) {
         continue;
       }
       if (!g) continue;
+      // code d'origine du glyphe : pdf.js donne parfois un caractère Unicode
+      // (LMMathExtension de lmodern : ∫, ∑, parenthèses) qui ne dit plus quelle
+      // taille de symbole est dessinée, alors que le code CMEX le dit
       const code = g.originalCharCode;
-      if (code >= 9 && code <= 13) {
+      if (code != null && code < 128) {
         const m = mul(ctm, tm);
         const x = m[0] * tx + m[2] * (ty + rise) + m[4];
         const y = m[1] * tx + m[3] * (ty + rise) + m[5];
         const scale = Math.hypot(m[2], m[3]);
-        glyphs.push({ str: String.fromCharCode(code), x, y, size: fontSize * scale, width: (g.width ?? 0) * fontSize / 1000 * scale, fontName });
+        glyphs.push({ str: String.fromCharCode(code), x, y, size: fontSize * scale, width: (g.width ?? 0) * fontSize / 1000 * scale, fontName, cmex: true });
       }
       tx += ((g.width ?? 0) * fontSize / 1000 + charSpacing) * hScale;
     }
@@ -1439,12 +1484,28 @@ function analyzePage(page, ctx) {
     l.mono = l.els.every((e) => e.mono);
     l.bold = words.length > 0 && words.every((e) => e.b);
     const hasMathSeg = l.segs.some((s) => s.kind === "math");
-    const centered = Math.abs((l.x0 + l.x1) / 2 - (left + right) / 2) < 0.08 * (right - left) && l.x1 - l.x0 < 0.85 * (right - left);
+    // numéro d'équation « (1) », « (2.3) » collé au bord droit, loin de la formule
+    const lastSeg = l.segs[l.segs.length - 1];
+    const tagText = lastSeg?.kind === "text" && l.segs.length > 1 ? txtList(lastSeg.els).replace(/\s+/g, "") : "";
+    const tagX0 = lastSeg ? Math.min(...lastSeg.els.map((e) => e.x0)) : 0;
+    const coreX1 = l.segs.length > 1 ? Math.max(...l.segs.slice(0, -1).flatMap((s) => s.els.map((e) => e.x1))) : l.x1;
+    const tag = /^\((\d+(?:\.\d+)*[a-z]?)\)$/.exec(tagText)?.[1];
+    const tagged = tag && l.x1 > right - 1.5 * body && tagX0 - coreX1 > 2 * body;
+    const x1 = tagged ? coreX1 : l.x1;
+    const centered = Math.abs((l.x0 + x1) / 2 - (left + right) / 2) < 0.08 * (right - left) && x1 - l.x0 < 0.85 * (right - left);
     const indented = l.x0 > left + 2 * body;
     const mathWidth = l.segs.filter((s) => s.kind === "math").reduce((n, s) => n + Math.max(...s.els.map((e) => e.x1)) - Math.min(...s.els.map((e) => e.x0)), 0);
-    l.display = hasMathSeg && words.length <= 3 && words.every((e) => e.s.length <= 8) && mathWidth > 0.7 * (l.x1 - l.x0)
-      && (centered || (indented && l.x1 < right - 2 * body)) && l.segs[0].kind === "math" && !l.mono;
-    if (l.display && text.length) {
+    const words2 = tagged ? words.filter((e) => !lastSeg.els.includes(e)) : words;
+    l.display = hasMathSeg && words2.length <= 3 && words2.every((e) => e.s.length <= 8) && mathWidth > 0.7 * (x1 - l.x0)
+      && (centered || (indented && x1 < right - 2 * body)) && l.segs[0].kind === "math" && !l.mono;
+    if (l.display && tagged) {
+      l.tag = tag;
+      l.els = l.els.filter((e) => !lastSeg.els.includes(e));
+      l.segs = l.segs.slice(0, -1);
+      l.x1 = x1;
+    }
+    const text2 = l.segs.filter((s) => s.kind === "text");
+    if (l.display && text2.length) {
       // texte court au milieu (\text{si}) : la ligne reste une formule
       l.segs = [{ kind: "math", els: l.els, spaces: l.els.map(() => false), space: false }];
     }
@@ -1483,23 +1544,28 @@ function stripFurniture(pages) {
 function buildBlocks(pages, ctx) {
   stripFurniture(pages);
   const body = ctx.bodySize;
-  const headingSizes = [...new Set(pages.flatMap((p) => p.lines.filter((l) => l.size > 1.15 * body && !l.display).map((l) => Math.round(l.size))))]
+  const words = (l) => lineText(l).split(/\s+/).filter(Boolean).length;
+  const noBigMath = (l) => !l.segs.some((s) => s.kind === "math" && s.els.length > 3);
+  // titre : texte nettement plus grand, ou ligne courte tout en gras un peu plus
+  // grande que le texte (\subsection de LaTeX)
+  const isHeading = (l) => !l.display && noBigMath(l)
+    && ((l.size > 1.15 * body && words(l) <= 20) || (l.bold && l.size > 1.04 * body && words(l) <= 12));
+  const headingSizes = [...new Set(pages.flatMap((p) => p.lines.filter(isHeading).map((l) => Math.round(l.size))))]
     .sort((a, b) => b - a);
   const blocks = [];
   let prev = null;
   for (const p of pages) {
     for (const l of p.lines) {
       const text = inlineTxt(l);
-      const words = lineText(l).split(/\s+/).filter(Boolean).length;
       const firstWord = text.split(" ")[0] ?? "";
-      const marker = text.length > firstWord.length && (BULLET.test(firstWord) || ENUM.test(firstWord));
+      const marker = text.length > firstWord.length && (BULLET.test(firstWord) || ENUM.test(firstWord)) && !isHeading(l);
       // ligne de tableau : de grands blancs entre les éléments
       const row = !l.display && l.els.some((e, i) => i > 0 && e.x0 - l.els[i - 1].x1 > 1.5 * l.size);
       let type = "p";
       if (l.mono) type = "code";
       else if (l.display) type = "eq";
       else if (row) type = "row";
-      else if (l.size > 1.15 * body && words <= 20 && !l.segs.some((s) => s.kind === "math" && s.els.length > 3)) type = "h";
+      else if (isHeading(l)) type = "h";
       const level = type === "h" ? Math.min(3, headingSizes.indexOf(Math.round(l.size)) + 1 || 3) : 0;
       const last = blocks[blocks.length - 1];
       let join = false;
@@ -1600,7 +1666,7 @@ export function renderText(blocks) {
   for (const b of blocks) {
     if (b.type === "raw") out.push(b.text);
     else if (b.type === "code") out.push(codeLines(b.lines).join("\n"));
-    else if (b.type === "eq") out.push(...b.lines.map((l) => txtList(l.els, l.size)));
+    else if (b.type === "eq") out.push(...b.lines.map((l) => `${txtList(l.els, l.size)}${l.tag ? `    (${l.tag})` : ""}`));
     else if (b.type === "row") out.push(b.lines.map(inlineTxt).join("\n"));
     else out.push(joinLines(b.lines.map(inlineTxt)));
   }
@@ -1654,12 +1720,12 @@ export function renderMarkdown(blocks) {
   for (const b of blocks) {
     if (b.type === "raw") out.push(mdEscape(b.text));
     else if (b.type === "code") out.push("```\n" + codeLines(b.lines).join("\n") + "\n```");
-    else if (b.type === "eq") out.push(...b.lines.map((l) => `$$${texList(l.els)}$$`));
+    else if (b.type === "eq") out.push(...b.lines.map((l) => `$$${texList(l.els)}${l.tag ? ` \\tag{${l.tag}}` : ""}$$`));
     else if (b.type === "row") out.push(b.lines.map(inlineMd).join("\\\n"));
     else if (b.type === "h") out.push(`${"#".repeat(b.level || 1)} ${joinLines(b.lines.map(inlineMd)).replace(/\*\*/g, "")}`);
     else {
       let t = joinLines(b.lines.map(inlineMd));
-      if (b.list) t = t.replace(/^(\\?[•◦▪▸►‣⁃∙·∗*–—-])\s*/, "- ");
+      if (b.list) t = t.replace(/^(\\?[•◦▪▸►‣⁃∙·∗–—-]|\\?\*(?!\*))\s*/, "- ");
       else t = t.replace(/^(\d+)\. /, "$1\\. ").replace(/^([#+-]) /, "\\$1 ").replace(/^(=+|-+)$/, "\\$1");
       out.push(t);
     }
