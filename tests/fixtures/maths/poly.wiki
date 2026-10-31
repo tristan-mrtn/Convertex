@@ -1,0 +1,26 @@
+<span id="suites-et-séries"></span>
+= Suites et séries =
+
+<span id="définitions"></span>
+== Définitions ==
+
+Soit <math display="inline">(u_n)_{n \in \mathbb{N}}</math> une suite réelle définie par <math display="inline">u_0 = 1</math> et <math display="inline">u_{n+1} = 2u_n + 1</math>. On note <math display="inline">\overline{z}</math> le conjugué de <math display="inline">z</math>, <math display="inline">\|x\|</math> la norme de <math display="inline">x</math> et <math display="inline">f'(x)</math> la dérivée.
+
+La suite converge vers <math display="inline">\ell</math> si <math display="inline">\forall \varepsilon > 0, \exists N \in \mathbb{N}, \forall n \geq N, |u_n - \ell| \leq \varepsilon</math>.
+
+On rappelle que <math display="inline">\lim_{n\to\infty} \left(1+\frac{1}{n}\right)^n = e</math> et que <math display="inline">\binom{n}{k} = \frac{n!}{k!(n-k)!}</math>.
+
+<span id="formules-à-retenir"></span>
+== Formules à retenir ==
+
+<math display="block">\sum_{k=1}^{n} k = \frac{n(n+1)}{2}</math>
+
+<math display="block">\int_0^1 x^2 \, dx = \frac{1}{3}</math>
+
+<math display="block">A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}, \quad \det(A) = -2</math>
+
+<math display="block">f(x) = \begin{cases} x & \text{si } x \geq 0 \\ -x & \text{sinon} \end{cases}</math>
+
+<math display="block">\begin{aligned} (a+b)^2 &= a^2 + 2ab + b^2 \\ &\geq 4ab \end{aligned}</math>
+
+Racines : <math display="inline">\sqrt{2} \approx 1{,}414</math> et <math display="inline">\sqrt[3]{x}</math> ; lettres grecques : <math display="inline">\alpha, \beta, \Gamma, \Omega</math> ; vecteurs : <math display="inline">\vec{u} \cdot \vec{v}</math> et <math display="inline">\nabla f</math>.

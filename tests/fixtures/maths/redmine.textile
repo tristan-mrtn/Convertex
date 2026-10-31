@@ -1,0 +1,5 @@
+h1. Notes de TD (Redmine)
+
+La dérivée de <span class="math">f(x) = x^2 - 3x</span> est <span class="math">f'(x) = 2x - 3</span>, donc :
+
+<span class="math">\int_0^3 f'(x)\,dx = f(3) - f(0) = 0</span>

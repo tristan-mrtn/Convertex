@@ -1,0 +1,35 @@
+* Suites et séries
+:PROPERTIES:
+:CUSTOM_ID: suites-et-séries
+:END:
+** Définitions
+:PROPERTIES:
+:CUSTOM_ID: définitions
+:END:
+Soit \((u_n)_{n \in \mathbb{N}}\) une suite réelle définie par
+\(u_0 = 1\) et \(u_{n+1} = 2u_n + 1\). On note \(\overline{z}\) le
+conjugué de \(z\), \(\|x\|\) la norme de \(x\) et \(f'(x)\) la dérivée.
+
+La suite converge vers \(\ell\) si
+\(\forall \varepsilon > 0, \exists N \in \mathbb{N}, \forall n \geq N, |u_n - \ell| \leq \varepsilon\).
+
+On rappelle que \(\lim_{n\to\infty} \left(1+\frac{1}{n}\right)^n = e\)
+et que \(\binom{n}{k} = \frac{n!}{k!(n-k)!}\).
+
+** Formules à retenir
+:PROPERTIES:
+:CUSTOM_ID: formules-à-retenir
+:END:
+\[\sum_{k=1}^{n} k = \frac{n(n+1)}{2}\]
+
+\[\int_0^1 x^2 \, dx = \frac{1}{3}\]
+
+\[A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}, \quad \det(A) = -2\]
+
+\[f(x) = \begin{cases} x & \text{si } x \geq 0 \\ -x & \text{sinon} \end{cases}\]
+
+\[\begin{aligned} (a+b)^2 &= a^2 + 2ab + b^2 \\ &\geq 4ab \end{aligned}\]
+
+Racines : \(\sqrt{2} \approx 1{,}414\) et \(\sqrt[3]{x}\) ; lettres
+grecques : \(\alpha, \beta, \Gamma, \Omega\) ; vecteurs :
+\(\vec{u} \cdot \vec{v}\) et \(\nabla f\).

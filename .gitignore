@@ -3,3 +3,5 @@ ext/dist/
 ext/engines/
 scratch/
 *.zip
+tests/out/
+tests/samples/
