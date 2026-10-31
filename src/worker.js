@@ -3,6 +3,8 @@
 
 import { t } from "./i18n.js";
 import { createPandocInstance } from "../node_modules/pandoc-wasm/src/core.js";
+import { convertWithPandoc } from "./pandoc-run.js";
+import MATH_LUA from "./math.lua"; // texte du filtre, inclus dans le paquet par esbuild
 import {
   initializeImageMagick, ImageMagick, MagickFormat, MagickColor, AlphaAction, ColorType,
 } from "@imagemagick/magick-wasm";
@@ -67,64 +69,8 @@ function loadPandoc() {
   return pandocReady;
 }
 
-const PANDOC_READER = {
-  md: "markdown", txt: "markdown", tex: "latex", typ: "typst", adoc: "asciidoc",
-  wiki: "mediawiki", dbk: "docbook",
-};
-const PANDOC_WRITER = {
-  md: "gfm", txt: "plain", tex: "latex", typ: "typst", adoc: "asciidoc",
-  wiki: "mediawiki", dbk: "docbook5", epub: "epub3", html: "html5",
-};
-const BINARY_IO = new Set(["docx", "odt", "epub", "pptx"]);
-const STANDALONE = new Set(["html", "tex", "typ", "rtf", "dbk", "fb2", "ipynb"]);
-
-// Texte brut lu par le lecteur Markdown : tous les caractères qui ont un sens en
-// Markdown sont échappés (un « * » ou un « $ » restent des caractères).
-function plainToMarkdown(text) {
-  return text
-    .replace(/\r\n?/g, "\n")
-    .split("\n")
-    .map((line) => line.replace(/^[ \t]+/, "").replace(/[\\`*_{}[\]()#+\-.!|<>$~^&=:@%"']/g, "\\$&"))
-    .join("\n");
-}
-
-async function runPandoc({ bytes, from, to, name }) {
-  const pandoc = await loadPandoc();
-  const options = {
-    from: PANDOC_READER[from] ?? from,
-    to: PANDOC_WRITER[to] ?? to,
-    standalone: STANDALONE.has(to),
-    metadata: { pagetitle: name.replace(/\.[^.]+$/, ""), title: undefined },
-  };
-  delete options.metadata.title;
-  if (to === "html") options["embed-resources"] = true;
-  // formules : MathML, que les navigateurs et les liseuses affichent sans script
-  if (to === "html" || to === "epub") options["html-math-method"] = { method: "mathml" };
-
-  const files = {};
-  let stdin = null;
-  if (BINARY_IO.has(from)) {
-    const inName = `entree.${from}`;
-    files[inName] = new Blob([bytes]);
-    options["input-files"] = [inName];
-  } else {
-    stdin = new TextDecoder().decode(bytes);
-    if (from === "txt") stdin = plainToMarkdown(stdin);
-  }
-  const outName = `sortie.${to}`;
-  if (BINARY_IO.has(to)) options["output-file"] = outName;
-
-  const result = await pandoc.convert(options, stdin, files);
-  if (BINARY_IO.has(to)) {
-    const out = result.files?.[outName];
-    if (!out) throw new Error(`Pandoc: ${result.stderr || t("noOutput")}`);
-    return new Uint8Array(await out.arrayBuffer());
-  }
-  if (!result.stdout && result.stderr) throw new Error(`Pandoc: ${result.stderr}`);
-  let out = result.stdout;
-  // l'annotation TeX des formules MathML n'est pas affichée par tous les lecteurs
-  if (to === "html") out = out.replace(/<annotation encoding="application\/x-tex">[\s\S]*?<\/annotation>/g, "").replace(/<\/?semantics>/g, "");
-  return new TextEncoder().encode(out);
+async function runPandoc(job) {
+  return convertWithPandoc(await loadPandoc(), job, { lua: MATH_LUA });
 }
 
 /* ---------------- ffmpeg ---------------- */
