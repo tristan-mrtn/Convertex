@@ -5,10 +5,14 @@ import * as XLSX from "xlsx";
 import * as yaml from "js-yaml";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import { XMLParser, XMLBuilder } from "fast-xml-parser";
-import { zipSync, gzipSync, Gunzip, Unzip, UnzipInflate } from "fflate";
-import { PDFDocument, rgb } from "pdf-lib";
+import { zipSync, gzipSync } from "fflate";
+import { MAX_UNPACKED, unzipLimited, gunzipLimited } from "./zip-limit.js";
+import {
+  PDFDocument, rgb, pushGraphicsState, popGraphicsState, concatTransformationMatrix,
+  setFillingColor, moveTo, lineTo, appendBezierCurve, closePath, fill,
+} from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import { marked } from "marked";
+import { Marked } from "marked";
 import { t } from "./i18n.js";
 
 const enc = new TextEncoder();
@@ -180,9 +184,10 @@ function writeTar(entries) {
 /* Sécurité des archives :
    - les chemins sont nettoyés (pas de "..", pas de chemin absolu ni de lettre de
      lecteur), sinon un outil d'extraction pourrait écrire hors du dossier prévu ;
-   - la taille décompressée est plafonnée pendant la décompression elle-même,
-     ce qui arrête les bombes de décompression même si l'archive ment sur ses tailles. */
-export const MAX_UNPACKED = 500 * 1024 ** 2; // 500 Mo
+   - la taille décompressée est plafonnée pendant la décompression elle-même
+     (zip-limit.js), ce qui arrête les bombes de décompression même si l'archive
+     ment sur ses tailles. */
+export { MAX_UNPACKED };
 
 export function sanitizePath(path) {
   const parts = String(path)
@@ -209,66 +214,6 @@ function uniquePaths(entries) {
   });
 }
 
-function concat(chunks, total) {
-  const out = new Uint8Array(total);
-  let o = 0;
-  for (const c of chunks) { out.set(c, o); o += c.length; }
-  return out;
-}
-
-function tooBig() {
-  return new Error(t("archiveTooBig"));
-}
-
-// On fournit l'archive par petits morceaux : chaque morceau de 64 Ko ne peut
-// produire qu'une quantité bornée de données, donc la limite agit tout de suite.
-function pushInSlices(stream, bytes, shouldStop) {
-  const SLICE = 64 * 1024;
-  if (bytes.length === 0) { stream.push(bytes, true); return; }
-  for (let o = 0; o < bytes.length; o += SLICE) {
-    stream.push(bytes.subarray(o, o + SLICE), o + SLICE >= bytes.length);
-    if (shouldStop()) return;
-  }
-}
-
-function unzipLimited(bytes) {
-  const files = [];
-  let total = 0;
-  let error = null;
-  const unzip = new Unzip((file) => {
-    if (file.name.endsWith("/")) return;
-    const chunks = [];
-    let size = 0;
-    file.ondata = (err, chunk, final) => {
-      if (error) return;
-      if (err) { error = err; return; }
-      size += chunk.length;
-      total += chunk.length;
-      if (total > MAX_UNPACKED) { error = tooBig(); file.terminate(); return; }
-      chunks.push(chunk);
-      if (final) files.push({ path: file.name, bytes: concat(chunks, size) });
-    };
-    file.start();
-  });
-  unzip.register(UnzipInflate);
-  pushInSlices(unzip, bytes, () => error);
-  if (error) throw error;
-  return files;
-}
-
-function gunzipLimited(bytes) {
-  const chunks = [];
-  let total = 0;
-  const gz = new Gunzip((chunk) => {
-    total += chunk.length;
-    // Lever l'erreur ici interrompt immédiatement la décompression
-    if (total > MAX_UNPACKED) throw tooBig();
-    chunks.push(chunk);
-  });
-  pushInSlices(gz, bytes, () => false);
-  return concat(chunks, total);
-}
-
 export function runArchive({ name, bytes }, from, to) {
   let entries;
   if (from === "zip") entries = unzipLimited(bytes);
@@ -287,6 +232,10 @@ export function runArchive({ name, bytes }, from, to) {
 /* ---------------- Écriture de PDF (Markdown ou texte) ---------------- */
 
 const PAGE = { w: 595.28, h: 841.89, margin: 56 };
+const INK = rgb(0.1, 0.1, 0.12);
+// Les formules (police Computer Modern de MathJax) paraissent plus petites que
+// DejaVu Sans à taille égale : on les grossit un peu pour équilibrer.
+const MATH_SCALE = 1.15;
 
 async function loadFonts(doc) {
   doc.registerFontkit(fontkit);
@@ -302,11 +251,78 @@ async function loadFonts(doc) {
   };
 }
 
-// Mise en page simple : on pose des "runs" de texte stylés et on gère le retour à la ligne.
+// Produit de matrices affines [a, b, c, d, e, f] ; FLIP retourne l'axe y
+const mul = (m, n) => [
+  m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1],
+  m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3],
+  m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5],
+];
+const FLIP = [1, 0, 0, -1, 0, 0];
+
+// Chemin SVG -> opérateurs PDF. Les courbes quadratiques (Q, T) deviennent des
+// cubiques exactes ; pdf-lib les approche mal, et ses T sont faux, ce qui
+// déformait les parenthèses de MathJax.
+const PATH_CACHE = new Map();
+function pathOperators(d) {
+  let ops = PATH_CACHE.get(d);
+  if (ops) return ops;
+  ops = [];
+  const tokens = d.match(/[MmLlHhVvCcSsQqTtZzAa]|[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/g) ?? [];
+  let i = 0, cmd = "";
+  let x = 0, y = 0, sx = 0, sy = 0; // point courant, début du sous-chemin
+  let qx = null, qy = null, cx2 = null, cy2 = null; // derniers points de contrôle (Q/T, C/S)
+  const num = () => Number(tokens[i++]);
+  const quad = (px, py, ex, ey) => {
+    // quadratique (x,y) -> (px,py) -> (ex,ey) écrite en cubique
+    ops.push(appendBezierCurve(x + (2 / 3) * (px - x), y + (2 / 3) * (py - y), ex + (2 / 3) * (px - ex), ey + (2 / 3) * (py - ey), ex, ey));
+    qx = px; qy = py; cx2 = cy2 = null; x = ex; y = ey;
+  };
+  while (i < tokens.length) {
+    if (/[a-zA-Z]/.test(tokens[i])) cmd = tokens[i++];
+    const rel = cmd === cmd.toLowerCase();
+    const ox = rel ? x : 0, oy = rel ? y : 0;
+    switch (cmd.toUpperCase()) {
+      case "M": x = ox + num(); y = oy + num(); sx = x; sy = y; ops.push(moveTo(x, y)); qx = cx2 = null; cmd = rel ? "l" : "L"; break;
+      case "L": x = ox + num(); y = oy + num(); ops.push(lineTo(x, y)); qx = cx2 = null; break;
+      case "H": x = ox + num(); ops.push(lineTo(x, y)); qx = cx2 = null; break;
+      case "V": y = oy + num(); ops.push(lineTo(x, y)); qx = cx2 = null; break;
+      case "Q": { const px = ox + num(), py = oy + num(); quad(px, py, ox + num(), oy + num()); break; }
+      case "T": {
+        const px = qx === null ? x : 2 * x - qx, py = qy === null ? y : 2 * y - qy;
+        quad(px, py, ox + num(), oy + num());
+        break;
+      }
+      case "C": {
+        const a = ox + num(), b = oy + num(), c = ox + num(), e = oy + num();
+        x = ox + num(); y = oy + num();
+        ops.push(appendBezierCurve(a, b, c, e, x, y)); cx2 = c; cy2 = e; qx = null;
+        break;
+      }
+      case "S": {
+        const a = cx2 === null ? x : 2 * x - cx2, b = cy2 === null ? y : 2 * y - cy2;
+        const c = ox + num(), e = oy + num();
+        x = ox + num(); y = oy + num();
+        ops.push(appendBezierCurve(a, b, c, e, x, y)); cx2 = c; cy2 = e; qx = null;
+        break;
+      }
+      case "A": // arc (absent des polices de MathJax) : segment droit
+        i += 5; x = ox + num(); y = oy + num(); ops.push(lineTo(x, y)); qx = cx2 = null; break;
+      case "Z": ops.push(closePath()); x = sx; y = sy; qx = cx2 = null; break;
+      default: i++; // jeton inattendu : ignoré
+    }
+  }
+  if (PATH_CACHE.size > 5000) PATH_CACHE.clear(); // les glyphes reviennent, les filets varient
+  PATH_CACHE.set(d, ops);
+  return ops;
+}
+
+// Mise en page simple : on pose des "runs" de texte stylés (ou des formules) et on
+// gère le retour à la ligne.
 class Layout {
-  constructor(doc, fonts) {
+  constructor(doc, fonts, math) {
     this.doc = doc;
     this.fonts = fonts;
+    this.math = math; // module MathJax, chargé seulement si le document a des formules
     this.newPage();
   }
   newPage() {
@@ -316,41 +332,124 @@ class Layout {
   ensure(h) {
     if (this.y - h < PAGE.margin) this.newPage();
   }
-  // runs : [{ text, font, color }]
+  // Formule composée par MathJax : largeur, hauteur au-dessus et au-dessous de la
+  // ligne de base, en points. Réduite si elle dépasse la largeur disponible.
+  mathBox(tex, display, size, maxW) {
+    if (!this.math) return null;
+    let vector;
+    try {
+      vector = this.math.texToVector(tex, display);
+    } catch {
+      return null; // TeX invalide : affiché tel quel
+    }
+    let scale = size * MATH_SCALE;
+    if (vector.width * scale > maxW) scale = maxW / vector.width;
+    return { vector, scale, width: vector.width * scale, ascent: vector.ascent * scale, descent: vector.descent * scale };
+  }
+  drawBox(box, x, baseline) {
+    const place = [box.scale, 0, 0, box.scale, x, baseline];
+    for (const op of box.vector.ops) {
+      const color = op.color ? rgb(...op.color) : INK;
+      if (op.type === "path") {
+        this.page.pushOperators(pushGraphicsState(), concatTransformationMatrix(...mul(place, op.m)),
+          setFillingColor(color), ...pathOperators(op.d), fill(), popGraphicsState());
+      } else {
+        // le texte SVG se lit axe y vers le bas : on le retourne
+        const font = op.bold ? this.fonts.bold : op.italic ? this.fonts.italic : this.fonts.regular;
+        this.page.pushOperators(pushGraphicsState(), concatTransformationMatrix(...mul(mul(place, op.m), FLIP)));
+        this.page.drawText(this.safeText(op.text, font), { x: 0, y: 0, size: op.size, font, color });
+        this.page.pushOperators(popGraphicsState());
+      }
+    }
+  }
+  // runs : [{ text, font, color }] ou [{ math, display }]
   paragraph(runs, { size = 11, indent = 0, gapAfter = 6, lineGap = 1.35 } = {}) {
     const maxW = PAGE.w - 2 * PAGE.margin - indent;
-    const lineH = size * lineGap;
-    let line = [];
-    let lineW = 0;
-    const flush = () => {
-      this.ensure(lineH);
-      let x = PAGE.margin + indent;
-      for (const part of line) {
-        this.page.drawText(part.text, { x, y: this.y - size, size, font: part.font, color: part.color ?? rgb(0.1, 0.1, 0.12) });
-        x += part.font.widthOfTextAtSize(part.text, size);
+    // Morceaux à poser : mots (avec leur espace final) et formules. « glued » : collé
+    // au morceau précédent, sans espace, donc pas de retour à la ligne entre les deux
+    // (une formule et le point qui la suit).
+    const items = [];
+    let afterSpace = true;
+    for (let run of runs) {
+      if (run.math !== undefined) {
+        const box = this.mathBox(run.math, run.display, size, maxW);
+        if (box) {
+          items.push({ box, width: box.width, glued: !afterSpace });
+          afterSpace = false;
+          continue;
+        }
+        run = { text: run.display ? `$$${run.math}$$` : `$${run.math}$`, font: this.fonts.mono };
       }
-      this.y -= lineH;
-      line = [];
-      lineW = 0;
-    };
-    for (const run of runs) {
-      const pieces = run.text.split(/(\n)/);
-      for (const piece of pieces) {
-        if (piece === "\n") { flush(); continue; }
+      for (const piece of run.text.split(/(\n)/)) {
+        if (piece === "\n") { items.push({ newline: true }); afterSpace = true; continue; }
         for (const word of piece.split(/(?<=\s)/)) {
           if (!word) continue;
-          const safe = this.safeText(word, run.font);
-          const w = run.font.widthOfTextAtSize(safe, size);
-          if (lineW + w > maxW && lineW > 0) flush();
-          const text = lineW === 0 ? safe.trimStart() : safe;
-          if (!text) continue;
-          line.push({ text, font: run.font, color: run.color });
-          lineW += run.font.widthOfTextAtSize(text, size);
+          const text = this.safeText(word, run.font);
+          items.push({ text, font: run.font, color: run.color, width: run.font.widthOfTextAtSize(text, size), glued: !afterSpace && !/^\s/.test(text) });
+          afterSpace = /\s$/.test(text);
         }
       }
     }
+
+    let line = [];
+    let lineW = 0;
+    const flush = () => {
+      // une formule haute (fraction, somme…) agrandit l'interligne
+      let ascent = size;
+      let descent = size * (lineGap - 1);
+      for (const part of line) {
+        if (!part.box) continue;
+        ascent = Math.max(ascent, part.box.ascent + size * 0.3);
+        descent = Math.max(descent, part.box.descent + size * 0.25);
+      }
+      this.ensure(ascent + descent);
+      const baseline = this.y - ascent;
+      let x = PAGE.margin + indent;
+      for (const part of line) {
+        if (part.box) this.drawBox(part.box, x, baseline);
+        else this.page.drawText(part.text, { x, y: baseline, size, font: part.font, color: part.color ?? INK });
+        x += part.width;
+      }
+      this.y -= ascent + descent;
+      line = [];
+      lineW = 0;
+    };
+    for (let i = 0; i < items.length;) {
+      if (items[i].newline) { flush(); i++; continue; }
+      let j = i + 1;
+      while (j < items.length && !items[j].newline && items[j].glued) j++;
+      const unit = items.slice(i, j);
+      if (lineW + unit.reduce((w, it) => w + it.width, 0) > maxW && lineW > 0) flush();
+      for (const it of unit) {
+        if (lineW === 0 && it.text !== undefined) {
+          const text = it.text.trimStart();
+          if (!text) continue;
+          const width = it.font.widthOfTextAtSize(text, size);
+          line.push({ ...it, text, width });
+          lineW += width;
+        } else {
+          line.push(it);
+          lineW += it.width;
+        }
+      }
+      i = j;
+    }
     if (line.length) flush();
     this.y -= gapAfter;
+  }
+  // Formule centrée sur sa propre ligne
+  displayMath(tex, { size = 11, indent = 0 } = {}) {
+    const maxW = PAGE.w - 2 * PAGE.margin - indent;
+    const box = this.mathBox(tex, true, size, maxW);
+    if (!box) {
+      this.paragraph([{ text: tex, font: this.fonts.mono, color: rgb(0.2, 0.2, 0.25) }], { size: 9.5, indent: indent + 10, lineGap: 1.3 });
+      return;
+    }
+    const gap = size * 0.6;
+    this.ensure(gap + box.ascent + box.descent + gap);
+    const baseline = this.y - gap - box.ascent;
+    this.drawBox(box, PAGE.margin + indent + (maxW - box.width) / 2, baseline);
+    this.y = baseline - box.descent - gap;
   }
   // Remplace les caractères absents de la police (emoji…) par un point d'interrogation
   safeText(text, font) {
@@ -369,6 +468,62 @@ class Layout {
   }
 }
 
+/* Formules dans le Markdown : $…$, $$…$$, \(…\), \[…\], $`…`$ (GitHub), blocs
+   ```math et environnements \begin{align}… écrits sans délimiteurs. */
+const MATH_ENV = /^(?:equation|align|gather|multline|flalign|alignat|eqnarray|displaymath|math)\*?$/;
+// « \[1\] » est souvent un crochet échappé : sur une seule ligne, il faut quelque
+// chose de mathématique dedans pour y voir une formule
+const looksLikeMath = (tex) => /[\\^_=<>]/.test(tex) || tex.includes("\n");
+
+const mathInline = {
+  name: "math",
+  level: "inline",
+  start(src) {
+    const i = src.search(/(?<!\\)\$|\\[([]/);
+    return i < 0 ? undefined : i;
+  },
+  tokenizer(src) {
+    const make = (m, display) => ({ type: "math", raw: m[0], text: m[1].trim(), display });
+    let m;
+    if ((m = /^\$`([^`]+)`\$/.exec(src))) return make(m, false);
+    if ((m = /^\$\$((?:(?!\$\$)[\s\S])+?)\$\$/.exec(src))) return make(m, true);
+    if ((m = /^\\\(([\s\S]+?)\\\)/.exec(src))) return make(m, false);
+    if ((m = /^\\\[([\s\S]+?)\\\]/.exec(src)) && looksLikeMath(m[1])) return make(m, true);
+    if ((m = /^\$(?![\s$])((?:\\[\s\S]|[^\\$])+?)\$(?!\d)/.exec(src)) && !/\s$/.test(m[1])) return make(m, false);
+    return undefined;
+  },
+};
+
+const mathBlock = {
+  name: "mathBlock",
+  level: "block",
+  start(src) {
+    const m = /^ {0,3}(?:\$\$|\\\[|\\begin\{)/m.exec(src);
+    return m ? m.index : undefined;
+  },
+  tokenizer(src) {
+    let m = /^ {0,3}\$\$((?:(?!\$\$)(?!\n[ \t]*\n)[\s\S])+?)\$\$[ \t]*(?:\n+|$)/.exec(src)
+      ?? /^ {0,3}\\\[((?:(?!\\\])(?!\n[ \t]*\n)[\s\S])+?)\\\][ \t]*(?:\n+|$)/.exec(src);
+    if (m && (m[0].trimStart().startsWith("$$") || looksLikeMath(m[1]))) {
+      return { type: "mathBlock", raw: m[0], text: m[1].trim() };
+    }
+    m = /^ {0,3}(\\begin\{([A-Za-z]+\*?)\}(?:(?!\n[ \t]*\n)[\s\S])+?\\end\{\2\})[ \t]*(?:\n+|$)/.exec(src);
+    if (m && MATH_ENV.test(m[2])) return { type: "mathBlock", raw: m[0], text: m[1] };
+    return undefined;
+  },
+};
+
+const markdown = new Marked({ extensions: [mathBlock, mathInline] });
+
+function hasMath(tokens) {
+  for (const tok of tokens ?? []) {
+    if (tok.type === "math" || tok.type === "mathBlock" || (tok.type === "code" && tok.lang === "math")) return true;
+    if (hasMath(tok.tokens) || hasMath(tok.items)) return true;
+    if (tok.type === "table" && [tok.header, ...tok.rows].some((row) => row.some((cell) => hasMath(cell.tokens)))) return true;
+  }
+  return false;
+}
+
 function inlineRuns(tokens, fonts, style = {}) {
   const runs = [];
   for (const tok of tokens ?? []) {
@@ -379,6 +534,9 @@ function inlineRuns(tokens, fonts, style = {}) {
       case "link": runs.push(...inlineRuns(tok.tokens, fonts, { ...style, link: true })); break;
       case "br": runs.push({ text: "\n", font: fonts.regular }); break;
       case "image": runs.push({ text: t("imagePlaceholder", tok.text || tok.href), font: fonts.italic }); break;
+      case "math": runs.push({ math: tok.text, display: tok.display }); break;
+      // balise HTML dans le texte (lien avec attributs écrit par Pandoc…) : seul son contenu compte
+      case "html": if (/^<br\s*\/?>$/i.test(tok.text.trim())) runs.push({ text: "\n", font: fonts.regular }); break;
       default: {
         if (tok.tokens) { runs.push(...inlineRuns(tok.tokens, fonts, style)); break; }
         const font = style.bold ? fonts.bold : style.italic ? fonts.italic : fonts.regular;
@@ -394,6 +552,21 @@ function decodeEntities(s) {
     .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 }
 
+// Paragraphe qui peut contenir des formules centrées ($$…$$ au milieu du texte, ou
+// dans l'énoncé en italique d'un théorème) : le texte est coupé autour de chacune.
+function paragraphWithMath(layout, tokens, fonts, { indent, gapAfter = 6 }) {
+  const parts = [[]];
+  for (const run of inlineRuns(tokens, fonts)) {
+    if (run.math !== undefined && run.display) parts.push(run, []);
+    else parts.at(-1).push(run);
+  }
+  parts.forEach((part, i) => {
+    if (!Array.isArray(part)) { layout.displayMath(part.math, { indent }); return; }
+    if (!part.some((r) => r.math !== undefined || r.text.trim())) return;
+    layout.paragraph(part, { indent, gapAfter: i === parts.length - 1 ? gapAfter : 2 });
+  });
+}
+
 function renderBlocks(layout, tokens, fonts, indent = 0) {
   for (const tok of tokens) {
     switch (tok.type) {
@@ -404,10 +577,13 @@ function renderBlocks(layout, tokens, fonts, indent = 0) {
         break;
       }
       case "paragraph":
-        layout.paragraph(inlineRuns(tok.tokens, fonts), { indent });
+        paragraphWithMath(layout, tok.tokens, fonts, { indent });
         break;
       case "text":
-        layout.paragraph(inlineRuns(tok.tokens ?? [t], fonts), { indent, gapAfter: 2 });
+        paragraphWithMath(layout, tok.tokens ?? [tok], fonts, { indent, gapAfter: 2 });
+        break;
+      case "mathBlock":
+        layout.displayMath(tok.text, { indent });
         break;
       case "list":
         tok.items.forEach((item, i) => {
@@ -420,7 +596,8 @@ function renderBlocks(layout, tokens, fonts, indent = 0) {
         layout.y -= 4;
         break;
       case "code":
-        layout.paragraph([{ text: tok.text, font: fonts.mono, color: rgb(0.2, 0.2, 0.25) }], { size: 9.5, indent: indent + 10, lineGap: 1.3 });
+        if (tok.lang === "math") layout.displayMath(tok.text, { indent });
+        else layout.paragraph([{ text: tok.text, font: fonts.mono, color: rgb(0.2, 0.2, 0.25) }], { size: 9.5, indent: indent + 10, lineGap: 1.3 });
         break;
       case "blockquote":
         renderBlocks(layout, tok.tokens, fonts, indent + 18);
@@ -454,11 +631,14 @@ export async function runPdfWrite({ name, bytes }, from) {
   doc.setTitle(baseName(name));
   doc.setCreator("Convertex");
   const fonts = await loadFonts(doc);
-  const layout = new Layout(doc, fonts);
   const text = dec.decode(bytes);
   if (from === "md") {
-    renderBlocks(layout, marked.lexer(text), fonts);
+    const tokens = markdown.lexer(text);
+    // MathJax n'est chargé que si le document contient des formules
+    const math = hasMath(tokens) ? await import("./math-svg.js") : null;
+    renderBlocks(new Layout(doc, fonts, math), tokens, fonts);
   } else {
+    const layout = new Layout(doc, fonts, null);
     for (const para of text.split(/\r?\n/)) {
       layout.paragraph([{ text: para || " ", font: fonts.regular }], { size: 10.5, gapAfter: 0 });
     }
