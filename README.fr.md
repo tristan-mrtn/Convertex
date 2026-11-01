@@ -39,7 +39,7 @@ Les formules passent d'un format à l'autre sans devenir du code illisible :
 
 - équations Word (OMML), LibreOffice (MathML), LaTeX, Typst, PowerPoint, Markdown (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`, notation GitHub) et pages web (MathML, MathJax, KaTeX, Quarto, Wikipédia) ;
 - dans un PDF produit, elles sont composées par MathJax et dessinées en vectoriel ;
-- dans un PDF lu (un poly écrit en LaTeX), elles sont reconstruites en LaTeX à partir des polices et des filets de fractions, pour ressortir en vraies équations dans Word, LibreOffice ou Markdown ;
+- dans un PDF lu (un poly écrit en LaTeX, ou une page web avec MathJax imprimée en PDF), elles sont reconstruites en LaTeX à partir des polices et des filets de fractions, pour ressortir en vraies équations dans Word, LibreOffice ou Markdown ;
 - en texte brut, RTF et FB2, qui n'ont pas de notation mathématique, elles sont écrites en texte lisible (`u_n`, `x²`, `(b − a)/n`, `√(2 + u_n)`, `∑_(k=0)^n`), avec de vrais indices et exposants en RTF et FB2 ;
 - les équations numérotées gardent leur numéro, et les renvois `\eqref` deviennent « (1) ».
 

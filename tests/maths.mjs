@@ -26,7 +26,8 @@ const EXPECTED = {
 const expected = (file) => EXPECTED[file] ?? (file.startsWith("poly.") ? 22 : null);
 // PDF relus : la reconstruction ne retrouve pas chaque lettre isolée en formule,
 // on attend un minimum
-const PDF_MIN = { "algebre-lmodern.pdf": 10 };
+// cours-mathjax.pdf : page web (MathJax) imprimée en PDF par Chromium
+const PDF_MIN = { "algebre-lmodern.pdf": 10, "cours-mathjax.pdf": 9 };
 const pdfMin = (file) => PDF_MIN[file] ?? 20;
 
 const READER = { md: "markdown", tex: "latex", adoc: "asciidoc", ipynb: "ipynb" };

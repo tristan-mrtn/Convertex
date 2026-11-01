@@ -345,12 +345,16 @@ function mathGlyph(ch, fi, a) {
     a.up = up;
     return setGlyph(a, c, fi.bold ? `\\${up ? "mathbf" : "boldsymbol"}{${c}}` : c, "ord");
   }
-  if (c === "√") {
-    // Le signe radical pend sous son origine, posée à la hauteur de la barre.
+  if (c === "√" && fi.cls !== "ot") {
+    // Le signe radical de TeX pend sous son origine, posée à la hauteur de la barre.
     a.hi = a.y + 0.04 * a.size;
     a.lo = a.y - 0.96 * a.size;
     a.cy = (a.hi + a.lo) / 2;
     a.y = a.cy - 0.25 * a.size;
+  } else if (c === "√") {
+    // Police OpenType (MathJax, KaTeX, Cambria Math…) : posé sur la ligne de base
+    a.hi = a.y + 0.85 * a.size;
+    a.lo = a.y - 0.25 * a.size;
   }
   if (c in MATH_ACC) a.accName = MATH_ACC[c];
   return setGlyph(a, c, TEX[c] ?? c, a.accName ? "acc" : roleOf(c));
@@ -1150,13 +1154,53 @@ function buildLines(els) {
     cur = { els: [e], y: e.y, size: e.size, x0: e.x0, x1: e.x1 };
     lines.push(cur);
   }
+  const ordered = mergeLayers(lines);
   // une ligne qui ne contient que de petits éléments flottants va avec sa voisine
-  for (const l of lines) {
+  for (const l of ordered) {
     l.els.sort((a, b) => a.x0 - b.x0 || a.idx - b.idx);
     const ys = l.els.filter((e) => !e.kind && e.size > 0.85 * l.size).map((e) => e.y);
     if (ys.length) l.y = ys.sort((a, b) => a - b)[Math.floor(ys.length / 2)];
   }
-  return lines;
+  return ordered;
+}
+
+// Page imprimée depuis un navigateur (MathJax, KaTeX) : tout le texte est écrit
+// d'abord, puis les formules par-dessus, police par police. Une ligne qui reprend la
+// ligne de base d'une ligne précédente, dans les trous entre ses mots, la complète ;
+// les formules centrées qui restent sont remises à leur place dans la page.
+function mergeLayers(lines) {
+  let first = -1;
+  for (let i = 1; i < lines.length; i++) {
+    const l = lines[i];
+    for (let j = i - 1; j >= 0; j--) {
+      const m = lines[j];
+      if (m.gone) continue;
+      const T = Math.max(m.size, l.size);
+      if (Math.abs(l.y - m.y) > 0.3 * T || l.x0 < m.x0 - 0.5 * T || l.x1 > m.x1 + 0.5 * T) continue;
+      if (l.els.some((e) => m.els.some((f) => e.x0 < f.x1 - 0.1 * T && e.x1 > f.x0 + 0.1 * T))) continue;
+      m.els.push(...l.els);
+      l.gone = true;
+      if (first < 0) first = i;
+      break;
+    }
+  }
+  if (first < 0) return lines;
+  const main = lines.slice(0, first).filter((l) => !l.gone);
+  const rest = lines.slice(first).filter((l) => !l.gone).sort((a, b) => b.y - a.y);
+  const overlaps = (m, l) => m.x0 < l.x1 && m.x1 > l.x0;
+  for (const l of rest) {
+    // après la dernière ligne plus haute de la même colonne, sinon avant la première plus basse
+    let at = -1;
+    main.forEach((m, k) => {
+      if (m.y > l.y + 0.3 * l.size && overlaps(m, l)) at = k + 1;
+    });
+    if (at < 0) {
+      const below = main.findIndex((m) => m.y < l.y - 0.3 * l.size && overlaps(m, l));
+      at = below < 0 ? main.length : below;
+    }
+    main.splice(at, 0, l);
+  }
+  return main;
 }
 
 const SENTENCE_END = /[.!?:;…»"”)]$/;
@@ -1268,12 +1312,31 @@ function depthOf(els) {
 
 const simpleTxt = (s) => /^[\p{L}\p{N}∞′'.]+$/u.test(s) || [...s].length === 1;
 const grp = (s) => (simpleTxt(s) ? s : `(${s})`);
-const fracGrp = (s) => (/[\s+\-−=<>≤≥±∓·×,;:/]/.test(s) ? `(${s})` : s);
+// Parenthèses d'une fraction écrite en ligne, comme pour les autres formats (math.lua) :
+// (b − a)/n, n(n + 1)/2, n!/(k!(n − k)!), (−b ± √Δ)/(2a), mais 1/f(x), dy/dx, 1/x^2
+function fracGrp(s, els, den) {
+  let depth = 0;
+  let top = "";
+  for (const c of s) {
+    if ("([{⟨".includes(c)) {
+      if (depth === 0) top += "(";
+      depth++;
+    } else if (")]}⟩".includes(c)) depth = Math.max(0, depth - 1);
+    else if (depth === 0) top += c;
+  }
+  if (/[\s+\-−=<>≤≥±∓·×,;:/]/.test(top)) return `(${s})`;
+  if (!den || els.length <= 1) return s;
+  if (top === "(" || /^\p{L}+\($/u.test(top) || /^\d+([.,]\d+)?$/.test(top) || /^[d∂]\p{L}$/u.test(top)
+    || [...top.replace(/!+$/, "")].length <= 1) return s;
+  return `(${s})`;
+}
 
 function txtList(els, size) {
   let out = "";
+  let prev = "";
   els.forEach((e, i) => {
     const p = els[i - 1];
+    const t = txtOne(e);
     if (p) {
       const gap = e.x0 - p.x1;
       const tight = (!p.kind && p.role === "open") || (!e.kind && (e.role === "close" || /^[,.;!?]$/.test(e.s)));
@@ -1281,20 +1344,33 @@ function txtList(els, size) {
       if (gap > 1.6 * S) out += "    ";
       else if (gap > 0.8 * S) out += "  ";
       else if (!tight && (e.space || gap > 0.15 * S || (e.soft && gap > 0.13 * S))) out += " ";
+      // x^n e^(−x) et non x^ne^(−x) : une espace après un indice ou un exposant suivi d'une lettre
+      else if ((p.sub || p.sup) && /[_^]/.test(prev) && /^[\p{L}\p{N}]/u.test(t)) out += " ";
     }
-    out += txtOne(e);
+    out += t;
+    prev = t;
   });
   return out.replace(/\. \. \./g, "…").replace(/· · ·/g, "⋯").replace(/(\S) (?=\S)/g, "$1 ").trim();
 }
 
+// Indice ou exposant fait de chiffres seuls : x², u₀, ∫₀¹ (comme pour les autres formats)
+const SUP_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const SUB_DIGITS = "₀₁₂₃₄₅₆₇₈₉";
+const digitsAs = (s, set) => s.replace(/\d/g, (d) => set[d]);
+
 function scriptsTxt(base, e) {
   let s = base;
-  if (e.sub) s += `_${grp(txtList(e.sub))}`;
+  if (e.sub) {
+    const sub = txtList(e.sub);
+    s += /^\d+$/.test(sub) ? digitsAs(sub, SUB_DIGITS) : `_${grp(sub)}`;
+  }
   if (e.sup) {
     const sup = txtList(e.sup);
     if (/^[′']+$/.test(sup)) s += sup.replace(/'/g, "′");
     else if (/^[∘◦]$/.test(sup)) s += "°";
-    else s += `^${grp(sup)}`;
+    else if (/^\d+$/.test(sup)) s += digitsAs(sup, SUP_DIGITS);
+    // exposant de plusieurs termes entre parenthèses : e^(iπ), x^(2n) (mais x^10)
+    else s += `^${e.sup.length > 1 && !/^\d+$/.test(sup) ? `(${sup})` : grp(sup)}`;
   }
   return s;
 }
@@ -1302,7 +1378,7 @@ function scriptsTxt(base, e) {
 function txtOne(e) {
   switch (e.kind) {
     case "frac":
-      return `${fracGrp(txtList(e.num))}/${fracGrp(txtList(e.den))}`;
+      return `${fracGrp(txtList(e.num), e.num, false)}/${fracGrp(txtList(e.den), e.den, true)}`;
     case "sqrt": {
       const body = txtList(e.body);
       const root = e.index ? { 3: "∛", 4: "∜" }[txtList(e.index)] : "√";
@@ -1628,7 +1704,7 @@ function inlineTxt(l) {
   let out = "";
   l.segs.forEach((s, i) => {
     const t = s.kind === "text" ? textRunTxt(s.els, l) : txtList(s.els, l.size);
-    if (i > 0 && s.space && !/^[,.;:!?)]/.test(t)) out += " ";
+    if (i > 0 && s.space && !/^[,.)]/.test(t)) out += " ";
     out += t;
   });
   return out.trim();
@@ -1702,12 +1778,12 @@ function inlineMd(l) {
       if (k) t = k === "sup" ? `^${t.replace(/ /g, "\\ ")}^` : `~${t.replace(/ /g, "\\ ")}~`;
       if (mark !== style) {
         close();
-        if (sp && !/^[,.;:!?)]/.test(t)) out += " ";
+        if (sp && !/^[,.)]/.test(t)) out += " ";
         if (mark && /\p{L}|\p{N}/u.test(t)) {
           out += mark;
           style = mark;
         }
-      } else if (sp && !/^[,.;:!?)]/.test(t)) out += " ";
+      } else if (sp && !/^[,.)]/.test(t)) out += " ";
       out += t;
     });
   });
