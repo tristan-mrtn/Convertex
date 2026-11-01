@@ -1,0 +1,32 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage{amsmath,amssymb,amsthm}
+\newtheorem{theorem}{Théorème}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\DeclareMathOperator{\Ker}{Ker}
+\title{Algèbre linéaire}
+\author{Poly de cours}
+\begin{document}
+\maketitle
+\section{Applications linéaires}
+Soit $f : \R^n \to \R^p$ une application linéaire. Son noyau est $\Ker f = \{x \in \R^n \mid f(x) = 0\}$.
+\begin{theorem}[Rang]
+Pour tout $f \in \mathcal{L}(\R^n, \R^p)$, on a
+\begin{equation}\label{eq:rang}
+\dim \Ker f + \operatorname{rg} f = n.
+\end{equation}
+\end{theorem}
+D'après \eqref{eq:rang}, si $n > p$ alors $f$ n'est pas injective.
+\begin{align}
+\det(AB) &= \det(A)\det(B) \label{eq:det} \\
+\det(A^{-1}) &= \frac{1}{\det A} \nonumber
+\end{align}
+\[
+M = \begin{bmatrix} a & b \\ c & d \end{bmatrix}, \qquad
+\left| \begin{matrix} a & b \\ c & d \end{matrix} \right| = ad - bc
+\]
+Pour $n \in \N$, $\displaystyle \sum_{k=0}^{n} \binom{n}{k} = 2^n$.
+\end{document}

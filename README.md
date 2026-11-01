@@ -26,12 +26,22 @@ You drop a file into the side panel. The extension detects its real format (bina
 The core of the project is a **conversion graph**:
 
 - each format is a node (85 in total);
-- each engine adds weighted edges (1,331 direct conversions);
+- each engine adds weighted edges (1,332 direct conversions);
 - Dijkstra's algorithm finds the cheapest path to every target, up to 4 steps. For example `DOCX → Markdown → PDF → PNG`.
 
 The search runs over states (format, information lost so far) to rule out absurd paths: an image wrapped in a PDF cannot come back out as text, and a photo turned into a GIF does not become a one-frame "video".
 
 When a step produces several files (a 10-page PDF gives 10 images), the following steps apply to each of them and the result is bundled into a ZIP.
+
+### Math formulas
+
+Formulas move from one format to another without turning into unreadable code:
+
+- Word equations (OMML), LibreOffice (MathML), LaTeX, Typst, PowerPoint, Markdown (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`, GitHub notation) and web pages (MathML, MathJax, KaTeX, Quarto, Wikipedia);
+- in a PDF it writes, they are typeset by MathJax and drawn as vector paths;
+- in a PDF it reads (lecture notes written in LaTeX, or a web page with MathJax printed to PDF), they are rebuilt as LaTeX from the fonts and fraction rules, so they come out as real equations in Word, LibreOffice or Markdown;
+- in plain text, RTF and FB2, which have no math notation, they are written as readable text (`u_n`, `x²`, `(b − a)/n`, `√(2 + u_n)`, `∑_(k=0)^n`), with real subscripts and superscripts in RTF and FB2;
+- numbered equations keep their number, and `\eqref` references become "(1)".
 
 The **Graph** tab draws these paths: the source format in the center, one ring per extra step, and the chosen path highlighted. Without a file, it shows the full map of formats and their links.
 
@@ -59,6 +69,7 @@ The **Graph** tab draws these paths: the source format in the center, one ring p
 | [ImageMagick](https://github.com/dlemstra/magick-wasm) | images and RAW photos | worker |
 | [pdf.js](https://github.com/mozilla/pdf.js) | reading and rendering PDFs | panel |
 | [pdf-lib](https://github.com/Hopding/pdf-lib) | writing PDFs (DejaVu font for Unicode) | panel |
+| [MathJax](https://www.mathjax.org) | formulas in the PDFs it writes, as vector paths | panel, loaded only when needed |
 | [SheetJS](https://sheetjs.com) | spreadsheets | panel |
 | js-yaml, smol-toml, fast-xml-parser | structured data | panel |
 | [fflate](https://github.com/101arrowz/fflate) | archives (TAR written by hand) | panel |
@@ -108,27 +119,45 @@ src/
   graph.js           graph edges and Dijkstra
   pipeline.js        runs a path, step by step
   worker.js          ffmpeg, Pandoc and ImageMagick
+  pandoc-run.js      Pandoc options, formulas from ODT and PPTX objects
+  math.lua           Pandoc filter that repairs formulas
   engines-main.js    spreadsheets, data, archives, PDF writing
+  math-svg.js        formulas typeset by MathJax for PDFs
   engines-browser.js pdf.js and Canvas
+  pdf-layout.js      layout and formulas rebuilt from a PDF
+  zip-limit.js       capped decompression
   graphview.js       SVG drawing of the graph (zoom, pan)
   ui.js              side panel
   i18n.js            interface strings in English and French
   sanitize.js        removes active content from HTML output
 ext/                 extension ready to load (after the build)
 build.mjs            esbuild bundle and engine copy
+tests/               end-to-end tests and sample files
 ```
 
 ## Limitations
 
-- A PDF produced from a document uses a simple layout (headings, paragraphs, lists, tables, code): no images or advanced formatting.
+- A PDF produced from a document uses a simple layout (headings, paragraphs, lists, tables, code, formulas): no images or advanced formatting.
+- Formulas in a PDF compiled with XeLaTeX or LuaLaTeX (Latin Modern Math font) are rebuilt less accurately than with pdfLaTeX (roots, large braces).
 - No text recognition (OCR): a scanned PDF cannot become text.
 - Very large files (multi-GB videos) are limited by the browser's memory.
 - Proprietary formats without a free library (DWG, INDD…) are not supported.
 
 ## Development
 
+End-to-end tests (Chromium loads the extension and converts every file to all its targets):
+
+```bash
+npm run build
+node tests/e2e.mjs tests/fixtures/maths && node tests/maths.mjs   # formulas
+node tests/samples.mjs && node tests/e2e.mjs tests/samples        # every format
+node tests/formules-texte.mjs                                     # formulas in plain text, no browser
+```
+
+This needs a Chromium that accepts `--load-extension` (`npx playwright install chromium`, or its path in `CHROME_PATH`).
+
 This project was built with [Claude Code](https://claude.com/claude-code).
 
 ## License
 
-GPL-3.0 or later, because ffmpeg (with x264) and Pandoc are GPL. DejaVu fonts under their own free license (see `assets/fonts`).
+GPL-3.0 or later, because ffmpeg (with x264) and Pandoc are GPL. DejaVu fonts under their own free license (see `assets/fonts`), MathJax under the Apache 2.0 license.

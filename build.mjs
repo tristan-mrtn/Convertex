@@ -4,10 +4,12 @@ import { cpSync, mkdirSync, rmSync } from "node:fs";
 
 const nm = (p) => `node_modules/${p}`;
 const common = { bundle: true, format: "esm", platform: "browser", target: "chrome116",
-  minify: true, legalComments: "none", logLevel: "warning" };
+  minify: true, legalComments: "none", logLevel: "warning", loader: { ".lua": "text" } };
 
 rmSync("ext/dist", { recursive: true, force: true });
-await build({ ...common, entryPoints: ["src/ui.js"], outfile: "ext/dist/sidepanel.js" });
+// découpage : MathJax (formules des PDF écrits) n'est chargé qu'à la demande
+await build({ ...common, entryPoints: { sidepanel: "src/ui.js" }, outdir: "ext/dist", splitting: true,
+  chunkNames: "chunks/[name]-[hash]" });
 await build({ ...common, entryPoints: ["src/worker.js"], outfile: "ext/dist/engine-worker.js" });
 
 rmSync("ext/engines", { recursive: true, force: true });

@@ -1,0 +1,41 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\usepackage{amsmath,amssymb}
+\usepackage[margin=2.5cm]{geometry}
+\begin{document}
+\section*{Chapitre 3 : Intégration}
+\subsection*{1. Primitives}
+Soit $f$ une fonction continue sur un intervalle $I$. On appelle primitive de $f$ toute fonction $F$ dérivable sur $I$ telle que $F' = f$.
+
+\textbf{Proposition.} Si $F$ et $G$ sont deux primitives de $f$, alors il existe $c \in \mathbb{R}$ tel que $G = F + c$.
+
+\subsection*{2. Intégrale de Riemann}
+Pour $a < b$ et $f$ continue sur $[a,b]$, on pose
+\[
+\int_a^b f(x)\,dx = \lim_{n \to +\infty} \frac{b-a}{n} \sum_{k=0}^{n-1} f\left(a + k\frac{b-a}{n}\right).
+\]
+On a par exemple
+\[
+\int_0^1 x^2\,dx = \frac{1}{3}, \qquad \int_0^{\pi} \sin t \, dt = 2 .
+\]
+
+\textbf{Théorème (intégration par parties).} Si $u$ et $v$ sont de classe $\mathcal{C}^1$ sur $[a,b]$,
+\begin{equation}
+\int_a^b u'(t)v(t)\,dt = \big[u(t)v(t)\big]_a^b - \int_a^b u(t)v'(t)\,dt .
+\end{equation}
+
+\subsection*{3. Exercices}
+\begin{enumerate}
+\item Calculer $\displaystyle I_n = \int_0^1 x^n e^{-x}\,dx$ pour $n \in \mathbb{N}$.
+\item Montrer que la suite $(u_n)$ définie par $u_{n+1} = \sqrt{2 + u_n}$ converge vers $2$.
+\item Résoudre le système
+\[
+\begin{cases} x + 2y = 5 \\ 3x - y = 1 \end{cases}
+\quad\text{puis calculer}\quad
+\det\begin{pmatrix} 1 & 2 \\ 3 & -1 \end{pmatrix} = -7 .
+\]
+\end{enumerate}
+\end{document}

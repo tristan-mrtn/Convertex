@@ -1,0 +1,16 @@
+Applications linéaires
+
+Soit f : ℝ^n → ℝ^p une application linéaire. Son noyau est Ker f = {x ∈ ℝ^n ∣ f(x) = 0}.
+
+Théorème 1 (Rang). Pour tout f ∈ ℒ(ℝ^n, ℝ^p), on a
+
+dim Ker f + rg f = n.    (1)
+
+D’après (1), si n > p alors f n’est pas injective.
+
+    det(AB) = det(A) det(B)    (2)
+det(A^(−1)) = 1/(det A)
+
+M = [a, b; c, d],    |a, b; c, d| = ad − bc
+
+Pour n ∈ ℕ, ∑_(k=0)^n binom(n, k) = 2^n.

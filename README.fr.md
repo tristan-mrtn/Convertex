@@ -26,12 +26,22 @@ On dépose un fichier dans le panneau latéral. L'extension détecte son vrai fo
 Le cœur du projet est un **graphe de conversion** :
 
 - chaque format est un nœud (85 au total) ;
-- chaque moteur ajoute des arêtes pondérées (1 331 conversions directes) ;
+- chaque moteur ajoute des arêtes pondérées (1 332 conversions directes) ;
 - un algorithme de Dijkstra trouve le chemin le moins coûteux vers chaque cible, jusqu'à 4 étapes. Par exemple `DOCX → Markdown → PDF → PNG`.
 
 Le parcours se fait sur des états (format, information perdue) pour écarter les chemins absurdes : une image mise en PDF ne peut pas ressortir en texte, une photo transformée en GIF ne devient pas une « vidéo » d'une seule image.
 
 Quand une étape produit plusieurs fichiers (un PDF de 10 pages donne 10 images), les étapes suivantes s'appliquent à chacun et le résultat est regroupé dans un ZIP.
+
+### Formules mathématiques
+
+Les formules passent d'un format à l'autre sans devenir du code illisible :
+
+- équations Word (OMML), LibreOffice (MathML), LaTeX, Typst, PowerPoint, Markdown (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`, notation GitHub) et pages web (MathML, MathJax, KaTeX, Quarto, Wikipédia) ;
+- dans un PDF produit, elles sont composées par MathJax et dessinées en vectoriel ;
+- dans un PDF lu (un poly écrit en LaTeX, ou une page web avec MathJax imprimée en PDF), elles sont reconstruites en LaTeX à partir des polices et des filets de fractions, pour ressortir en vraies équations dans Word, LibreOffice ou Markdown ;
+- en texte brut, RTF et FB2, qui n'ont pas de notation mathématique, elles sont écrites en texte lisible (`u_n`, `x²`, `(b − a)/n`, `√(2 + u_n)`, `∑_(k=0)^n`), avec de vrais indices et exposants en RTF et FB2 ;
+- les équations numérotées gardent leur numéro, et les renvois `\eqref` deviennent « (1) ».
 
 L'onglet **Graphe** dessine ces chemins : le format source au centre, un anneau par étape supplémentaire, le chemin choisi en surbrillance. Sans fichier, il montre la carte complète des formats et de leurs liens.
 
@@ -59,6 +69,7 @@ L'onglet **Graphe** dessine ces chemins : le format source au centre, un anneau 
 | [ImageMagick](https://github.com/dlemstra/magick-wasm) | images et photos RAW | worker |
 | [pdf.js](https://github.com/mozilla/pdf.js) | lecture et rendu des PDF | panneau |
 | [pdf-lib](https://github.com/Hopding/pdf-lib) | écriture de PDF (police DejaVu pour l'Unicode) | panneau |
+| [MathJax](https://www.mathjax.org) | formules des PDF produits, en tracés vectoriels | panneau, chargé seulement si besoin |
 | [SheetJS](https://sheetjs.com) | tableurs | panneau |
 | js-yaml, smol-toml, fast-xml-parser | données structurées | panneau |
 | [fflate](https://github.com/101arrowz/fflate) | archives (TAR écrit à la main) | panneau |
@@ -108,27 +119,45 @@ src/
   graph.js           arêtes du graphe et Dijkstra
   pipeline.js        exécution d'un chemin, étape par étape
   worker.js          ffmpeg, Pandoc et ImageMagick
+  pandoc-run.js      options de Pandoc, formules des objets ODT et PPTX
+  math.lua           filtre Pandoc qui remet les formules en état
   engines-main.js    tableurs, données, archives, écriture PDF
+  math-svg.js        formules composées par MathJax pour les PDF
   engines-browser.js pdf.js et Canvas
+  pdf-layout.js      mise en page et formules reconstruites depuis un PDF
+  zip-limit.js       décompression plafonnée
   graphview.js       dessin SVG du graphe (zoom, déplacement)
   ui.js              panneau latéral
   i18n.js            textes de l'interface en anglais et en français
   sanitize.js        retire le code actif des HTML produits
 ext/                 extension prête à charger (après le build)
 build.mjs            bundle esbuild et copie des moteurs
+tests/               tests de bout en bout et fichiers d'exemple
 ```
 
 ## Limites
 
-- Le PDF produit depuis un document est une mise en page simple (titres, paragraphes, listes, tableaux, code) : pas d'images ni de mise en forme avancée.
+- Le PDF produit depuis un document est une mise en page simple (titres, paragraphes, listes, tableaux, code, formules) : pas d'images ni de mise en forme avancée.
+- Les formules d'un PDF compilé avec XeLaTeX ou LuaLaTeX (police Latin Modern Math) sont moins bien reconstruites que celles de pdfLaTeX (racines, grandes accolades).
 - Pas de reconnaissance de texte (OCR) : un PDF scanné ne peut pas devenir du texte.
 - Les fichiers très lourds (vidéos de plusieurs Go) sont limités par la mémoire du navigateur.
 - Les formats propriétaires sans bibliothèque libre (DWG, INDD…) ne sont pas pris en charge.
 
 ## Développement
 
+Tests de bout en bout (Chromium charge l'extension et convertit chaque fichier vers toutes ses cibles) :
+
+```bash
+npm run build
+node tests/e2e.mjs tests/fixtures/maths && node tests/maths.mjs   # formules
+node tests/samples.mjs && node tests/e2e.mjs tests/samples        # tous les formats
+node tests/formules-texte.mjs                                     # formules en texte brut, sans navigateur
+```
+
+Il faut un Chromium qui accepte `--load-extension` (`npx playwright install chromium`, ou son chemin dans `CHROME_PATH`).
+
 Ce projet a été codé avec [Claude Code](https://claude.com/claude-code).
 
 ## Licence
 
-GPL-3.0 ou ultérieure, car ffmpeg (avec x264) et Pandoc sont sous GPL. Polices DejaVu sous leur licence libre (voir `assets/fonts`).
+GPL-3.0 ou ultérieure, car ffmpeg (avec x264) et Pandoc sont sous GPL. Polices DejaVu sous leur licence libre (voir `assets/fonts`), MathJax sous licence Apache 2.0.

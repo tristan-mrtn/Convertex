@@ -1,0 +1,47 @@
+== Suites et séries
+
+=== Définitions
+
+Soit latexmath:[(u_n)_{n \in \mathbb{N}}] une suite réelle définie par
+latexmath:[u_0 = 1] et latexmath:[u_{n+1} = 2u_n + 1]. On note
+latexmath:[\overline{z}] le conjugué de latexmath:[z], latexmath:[\|x\|]
+la norme de latexmath:[x] et latexmath:[f'(x)] la dérivée.
+
+La suite converge vers latexmath:[\ell] si
+latexmath:[\forall \varepsilon > 0, \exists N \in \mathbb{N}, \forall n \geq N, |u_n - \ell| \leq \varepsilon].
+
+On rappelle que
+latexmath:[\lim_{n\to\infty} \left(1+\frac{1}{n}\right)^n = e] et que
+latexmath:[\binom{n}{k} = \frac{n!}{k!(n-k)!}].
+
+=== Formules à retenir
+
+[latexmath]
+++++
+\sum_{k=1}^{n} k = \frac{n(n+1)}{2}
+++++
+
+[latexmath]
+++++
+\int_0^1 x^2 \, dx = \frac{1}{3}
+++++
+
+[latexmath]
+++++
+A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}, \quad \det(A) = -2
+++++
+
+[latexmath]
+++++
+f(x) = \begin{cases} x & \text{si } x \geq 0 \\ -x & \text{sinon} \end{cases}
+++++
+
+[latexmath]
+++++
+\begin{aligned} (a+b)^2 &= a^2 + 2ab + b^2 \\ &\geq 4ab \end{aligned}
+++++
+
+Racines : latexmath:[\sqrt{2} \approx 1{,}414] et
+latexmath:[\sqrt[3]{x}] ; lettres grecques :
+latexmath:[\alpha, \beta, \Gamma, \Omega] ; vecteurs :
+latexmath:[\vec{u} \cdot \vec{v}] et latexmath:[\nabla f].

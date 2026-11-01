@@ -1,0 +1,16 @@
+Environnements LaTeX dans du Markdown
+
+Le développement suivant :
+
+(a + b)² = a² + 2ab + b²    (1)
+(a − b)² = a² − 2ab + b²    (2)
+
+Et l’équation d’Euler :
+
+e^(iπ) + 1 = 0    (3)
+
+Avec des dollars autour :
+
+sin² x + cos² x = 1
+
+Fin.

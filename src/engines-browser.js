@@ -1,13 +1,14 @@
 // Moteurs qui ont besoin du navigateur : pdf.js (lecture/rendu PDF) et Canvas (SVG).
 import * as pdfjs from "pdfjs-dist/build/pdf.mjs";
 import { t } from "./i18n.js";
+import { layoutPdf, renderText, renderMarkdown, extractGraphics } from "./pdf-layout.js";
 
 const url = (p) => chrome.runtime.getURL(`engines/${p}`);
 pdfjs.GlobalWorkerOptions.workerSrc = url("pdfjs/pdf.worker.mjs");
 
 const baseName = (name) => name.replace(/\.[^.]+$/, "");
 
-function openPdf(bytes) {
+function openPdf(bytes, extra = {}) {
   return pdfjs.getDocument({
     data: bytes.slice(), // pdf.js transfère le buffer : on lui donne une copie
     cMapUrl: url("pdfjs/cmaps/"),
@@ -16,27 +17,42 @@ function openPdf(bytes) {
     wasmUrl: url("pdfjs/wasm/"),
     iccUrl: url("pdfjs/iccs/"),
     isEvalSupported: false,
+    ...extra,
   }).promise;
 }
 
+// Texte d'un PDF : la mise en page est reconstruite (paragraphes, titres,
+// formules). Vers Markdown, les formules sont écrites en TeX pour que Pandoc
+// en fasse de vraies équations (Word, ODT, HTML…).
 export async function runPdfText({ name, bytes }, from, to, options, onProgress) {
-  const doc = await openPdf(bytes);
+  // noms des polices nécessaires pour reconnaître les formules (CMMI, CMSY, Latin Modern Math…)
+  const doc = await openPdf(bytes, { fontExtraProperties: true, disableFontFace: true });
   const pages = [];
   for (let i = 1; i <= doc.numPages; i++) {
-    const content = await (await doc.getPage(i)).getTextContent();
-    let text = "";
-    for (const item of content.items) {
-      text += item.str ?? "";
-      if (item.hasEOL) text += "\n";
-    }
-    pages.push(text.trim());
+    const page = await doc.getPage(i);
+    const ops = await page.getOperatorList();
+    const content = await page.getTextContent();
+    const getFont = (fontName) => {
+      try {
+        return page.commonObjs.get(fontName);
+      } catch {
+        return null; // police non chargée : traitée comme du texte ordinaire
+      }
+    };
+    const { rules, glyphs } = extractGraphics(ops, pdfjs.OPS, getFont);
+    const fonts = new Map();
+    for (const { fontName } of [...content.items, ...glyphs]) if (!fonts.has(fontName)) fonts.set(fontName, getFont(fontName));
+    pages.push({ items: content.items, fonts, rules, glyphs, width: page.view[2], height: page.view[3] });
+    page.cleanup();
     onProgress?.(i / doc.numPages);
   }
-  const all = pages.join("\n\n");
-  if (!all.trim()) {
+  await doc.loadingTask?.destroy?.();
+  if (!pages.some((p) => p.items.some((it) => it.str?.trim()))) {
     throw new Error(t("noPdfText"));
   }
-  return [{ name: `${baseName(name)}.txt`, bytes: new TextEncoder().encode(all) }];
+  const blocks = layoutPdf(pages);
+  const text = to === "md" ? renderMarkdown(blocks) : renderText(blocks);
+  return [{ name: `${baseName(name)}.${to === "md" ? "md" : "txt"}`, bytes: new TextEncoder().encode(text) }];
 }
 
 export async function runPdfRender({ name, bytes }, from, to, options, onProgress) {

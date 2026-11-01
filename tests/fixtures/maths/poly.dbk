@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE article>
+<article
+  xmlns="http://docbook.org/ns/docbook" version="5.0"
+  xmlns:mml="http://www.w3.org/1998/Math/MathML"
+  xmlns:xlink="http://www.w3.org/1999/xlink" >
+  <info>
+    <title>Suites et séries</title>
+  </info>
+  <section xml:id="suites-et-séries">
+    <title>Suites et séries</title>
+    <section xml:id="définitions">
+      <title>Définitions</title>
+      <para>
+        Soit
+        <inlineequation><mml:math><mml:mrow><mml:mo mml:stretchy="false" mml:form="prefix">(</mml:mo><mml:msub><mml:mi>u</mml:mi><mml:mi>n</mml:mi></mml:msub><mml:msub><mml:mo mml:stretchy="false" mml:form="postfix">)</mml:mo><mml:mrow><mml:mi>n</mml:mi><mml:mo>∈</mml:mo><mml:mi mml:mathvariant="double-struck">ℕ</mml:mi></mml:mrow></mml:msub></mml:mrow></mml:math></inlineequation>
+        une suite réelle définie par
+        <inlineequation><mml:math><mml:mrow><mml:msub><mml:mi>u</mml:mi><mml:mn>0</mml:mn></mml:msub><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow></mml:math></inlineequation>
+        et
+        <inlineequation><mml:math><mml:mrow><mml:msub><mml:mi>u</mml:mi><mml:mrow><mml:mi>n</mml:mi><mml:mo>+</mml:mo><mml:mn>1</mml:mn></mml:mrow></mml:msub><mml:mo>=</mml:mo><mml:mn>2</mml:mn><mml:msub><mml:mi>u</mml:mi><mml:mi>n</mml:mi></mml:msub><mml:mo>+</mml:mo><mml:mn>1</mml:mn></mml:mrow></mml:math></inlineequation>.
+        On note
+        <inlineequation><mml:math><mml:mover><mml:mi>z</mml:mi><mml:mo mml:accent="true">¯</mml:mo></mml:mover></mml:math></inlineequation>
+        le conjugué de
+        <inlineequation><mml:math><mml:mi>z</mml:mi></mml:math></inlineequation>,
+        <inlineequation><mml:math><mml:mrow><mml:mo mml:stretchy="false" mml:form="postfix">∥</mml:mo><mml:mi>x</mml:mi><mml:mo mml:stretchy="false" mml:form="postfix">∥</mml:mo></mml:mrow></mml:math></inlineequation>
+        la norme de
+        <inlineequation><mml:math><mml:mi>x</mml:mi></mml:math></inlineequation>
+        et
+        <inlineequation><mml:math><mml:mrow><mml:msup><mml:mi>f</mml:mi><mml:mo>′</mml:mo></mml:msup><mml:mo mml:stretchy="false" mml:form="prefix">(</mml:mo><mml:mi>x</mml:mi><mml:mo mml:stretchy="false" mml:form="postfix">)</mml:mo></mml:mrow></mml:math></inlineequation>
+        la dérivée.
+      </para>
+      <para>
+        La suite converge vers
+        <inlineequation><mml:math><mml:mi>ℓ</mml:mi></mml:math></inlineequation>
+        si
+        <inlineequation><mml:math><mml:mrow><mml:mo>∀</mml:mo><mml:mi>ε</mml:mi><mml:mo>&gt;</mml:mo><mml:mn>0</mml:mn><mml:mo>,</mml:mo><mml:mo>∃</mml:mo><mml:mi>N</mml:mi><mml:mo>∈</mml:mo><mml:mi mml:mathvariant="double-struck">ℕ</mml:mi><mml:mo>,</mml:mo><mml:mo>∀</mml:mo><mml:mi>n</mml:mi><mml:mo>≥</mml:mo><mml:mi>N</mml:mi><mml:mo>,</mml:mo><mml:mo mml:stretchy="false" mml:form="prefix">|</mml:mo><mml:msub><mml:mi>u</mml:mi><mml:mi>n</mml:mi></mml:msub><mml:mo>−</mml:mo><mml:mi>ℓ</mml:mi><mml:mo mml:stretchy="false" mml:form="prefix">|</mml:mo><mml:mo>≤</mml:mo><mml:mi>ε</mml:mi></mml:mrow></mml:math></inlineequation>.
+      </para>
+      <para>
+        On rappelle que
+        <inlineequation><mml:math><mml:mrow><mml:msub><mml:mrow><mml:mi mml:mathvariant="normal">lim</mml:mi><mml:mo>&#8289;</mml:mo></mml:mrow><mml:mrow><mml:mi>n</mml:mi><mml:mo>→</mml:mo><mml:mi>∞</mml:mi></mml:mrow></mml:msub><mml:msup><mml:mrow><mml:mo mml:stretchy="true" mml:form="prefix">(</mml:mo><mml:mn>1</mml:mn><mml:mo>+</mml:mo><mml:mfrac><mml:mn>1</mml:mn><mml:mi>n</mml:mi></mml:mfrac><mml:mo mml:stretchy="true" mml:form="postfix">)</mml:mo></mml:mrow><mml:mi>n</mml:mi></mml:msup><mml:mo>=</mml:mo><mml:mi>e</mml:mi></mml:mrow></mml:math></inlineequation>
+        et que
+        <inlineequation><mml:math><mml:mrow><mml:mrow><mml:mo mml:stretchy="true" mml:form="prefix">(</mml:mo><mml:mfrac mml:linethickness="0"><mml:mi>n</mml:mi><mml:mi>k</mml:mi></mml:mfrac><mml:mo mml:stretchy="true" mml:form="postfix">)</mml:mo></mml:mrow><mml:mo>=</mml:mo><mml:mfrac><mml:mrow><mml:mi>n</mml:mi><mml:mi>!</mml:mi></mml:mrow><mml:mrow><mml:mi>k</mml:mi><mml:mi>!</mml:mi><mml:mo mml:stretchy="false" mml:form="prefix">(</mml:mo><mml:mi>n</mml:mi><mml:mo>−</mml:mo><mml:mi>k</mml:mi><mml:mo mml:stretchy="false" mml:form="postfix">)</mml:mo><mml:mi>!</mml:mi></mml:mrow></mml:mfrac></mml:mrow></mml:math></inlineequation>.
+      </para>
+    </section>
+    <section xml:id="formules-à-retenir">
+      <title>Formules à retenir</title>
+      <para>
+        <informalequation><mml:math><mml:mrow><mml:munderover><mml:mo>∑</mml:mo><mml:mrow><mml:mi>k</mml:mi><mml:mo>=</mml:mo><mml:mn>1</mml:mn></mml:mrow><mml:mi>n</mml:mi></mml:munderover><mml:mi>k</mml:mi><mml:mo>=</mml:mo><mml:mfrac><mml:mrow><mml:mi>n</mml:mi><mml:mo mml:stretchy="false" mml:form="prefix">(</mml:mo><mml:mi>n</mml:mi><mml:mo>+</mml:mo><mml:mn>1</mml:mn><mml:mo mml:stretchy="false" mml:form="postfix">)</mml:mo></mml:mrow><mml:mn>2</mml:mn></mml:mfrac></mml:mrow></mml:math></informalequation>
+      </para>
+      <para>
+        <informalequation><mml:math><mml:mrow><mml:msubsup><mml:mo>∫</mml:mo><mml:mn>0</mml:mn><mml:mn>1</mml:mn></mml:msubsup><mml:msup><mml:mi>x</mml:mi><mml:mn>2</mml:mn></mml:msup><mml:mspace mml:width="0.167em"></mml:mspace><mml:mi>d</mml:mi><mml:mi>x</mml:mi><mml:mo>=</mml:mo><mml:mfrac><mml:mn>1</mml:mn><mml:mn>3</mml:mn></mml:mfrac></mml:mrow></mml:math></informalequation>
+      </para>
+      <para>
+        <informalequation><mml:math><mml:mrow><mml:mi>A</mml:mi><mml:mo>=</mml:mo><mml:mrow><mml:mo mml:stretchy="true" mml:form="prefix">(</mml:mo><mml:mtable><mml:mtr><mml:mtd mml:columnalign="center" mml:style="text-align: center"><mml:mn>1</mml:mn></mml:mtd><mml:mtd mml:columnalign="center" mml:style="text-align: center"><mml:mn>2</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd mml:columnalign="center" mml:style="text-align: center"><mml:mn>3</mml:mn></mml:mtd><mml:mtd mml:columnalign="center" mml:style="text-align: center"><mml:mn>4</mml:mn></mml:mtd></mml:mtr></mml:mtable><mml:mo mml:stretchy="true" mml:form="postfix">)</mml:mo></mml:mrow><mml:mo>,</mml:mo><mml:mspace mml:width="1.0em"></mml:mspace><mml:mrow><mml:mi mml:mathvariant="normal">det</mml:mi><mml:mo>&#8289;</mml:mo></mml:mrow><mml:mo mml:stretchy="false" mml:form="prefix">(</mml:mo><mml:mi>A</mml:mi><mml:mo mml:stretchy="false" mml:form="postfix">)</mml:mo><mml:mo>=</mml:mo><mml:mi>−</mml:mi><mml:mn>2</mml:mn></mml:mrow></mml:math></informalequation>
+      </para>
+      <para>
+        <informalequation><mml:math><mml:mrow><mml:mi>f</mml:mi><mml:mo mml:stretchy="false" mml:form="prefix">(</mml:mo><mml:mi>x</mml:mi><mml:mo mml:stretchy="false" mml:form="postfix">)</mml:mo><mml:mo>=</mml:mo><mml:mrow><mml:mo mml:stretchy="true" mml:form="prefix">{</mml:mo><mml:mtable><mml:mtr><mml:mtd mml:columnalign="left" mml:style="text-align: left"><mml:mi>x</mml:mi></mml:mtd><mml:mtd mml:columnalign="left" mml:style="text-align: left"><mml:mrow><mml:mtext mml:mathvariant="normal">si </mml:mtext><mml:mspace mml:width="0.333em"></mml:mspace></mml:mrow><mml:mi>x</mml:mi><mml:mo>≥</mml:mo><mml:mn>0</mml:mn></mml:mtd></mml:mtr><mml:mtr><mml:mtd mml:columnalign="left" mml:style="text-align: left"><mml:mi>−</mml:mi><mml:mi>x</mml:mi></mml:mtd><mml:mtd mml:columnalign="left" mml:style="text-align: left"><mml:mtext mml:mathvariant="normal">sinon</mml:mtext></mml:mtd></mml:mtr></mml:mtable></mml:mrow></mml:mrow></mml:math></informalequation>
+      </para>
+      <para>
+        <informalequation><mml:math><mml:mtable><mml:mtr><mml:mtd mml:columnalign="right" mml:style="text-align: right; padding-right: 0"><mml:mo mml:stretchy="false" mml:form="prefix">(</mml:mo><mml:mi>a</mml:mi><mml:mo>+</mml:mo><mml:mi>b</mml:mi><mml:msup><mml:mo mml:stretchy="false" mml:form="postfix">)</mml:mo><mml:mn>2</mml:mn></mml:msup></mml:mtd><mml:mtd mml:columnalign="left" mml:style="text-align: left; padding-left: 0"><mml:mo>=</mml:mo><mml:msup><mml:mi>a</mml:mi><mml:mn>2</mml:mn></mml:msup><mml:mo>+</mml:mo><mml:mn>2</mml:mn><mml:mi>a</mml:mi><mml:mi>b</mml:mi><mml:mo>+</mml:mo><mml:msup><mml:mi>b</mml:mi><mml:mn>2</mml:mn></mml:msup></mml:mtd></mml:mtr><mml:mtr><mml:mtd mml:columnalign="right" mml:style="text-align: right; padding-right: 0"></mml:mtd><mml:mtd mml:columnalign="left" mml:style="text-align: left; padding-left: 0"><mml:mo>≥</mml:mo><mml:mn>4</mml:mn><mml:mi>a</mml:mi><mml:mi>b</mml:mi></mml:mtd></mml:mtr></mml:mtable></mml:math></informalequation>
+      </para>
+      <para>
+        Racines :
+        <inlineequation><mml:math><mml:mrow><mml:msqrt><mml:mn>2</mml:mn></mml:msqrt><mml:mo>≈</mml:mo><mml:mn>1</mml:mn><mml:mo>,</mml:mo><mml:mn>414</mml:mn></mml:mrow></mml:math></inlineequation>
+        et
+        <inlineequation><mml:math><mml:mroot><mml:mi>x</mml:mi><mml:mn>3</mml:mn></mml:mroot></mml:math></inlineequation>
+        ; lettres grecques :
+        <inlineequation><mml:math><mml:mrow><mml:mi>α</mml:mi><mml:mo>,</mml:mo><mml:mi>β</mml:mi><mml:mo>,</mml:mo><mml:mi mml:mathvariant="normal">Γ</mml:mi><mml:mo>,</mml:mo><mml:mi mml:mathvariant="normal">Ω</mml:mi></mml:mrow></mml:math></inlineequation>
+        ; vecteurs :
+        <inlineequation><mml:math><mml:mrow><mml:mover><mml:mi>u</mml:mi><mml:mo mml:accent="true">→</mml:mo></mml:mover><mml:mo>⋅</mml:mo><mml:mover><mml:mi>v</mml:mi><mml:mo mml:accent="true">→</mml:mo></mml:mover></mml:mrow></mml:math></inlineequation>
+        et
+        <inlineequation><mml:math><mml:mrow><mml:mi>∇</mml:mi><mml:mi>f</mml:mi></mml:mrow></mml:math></inlineequation>.
+      </para>
+    </section>
+  </section>
+</article>

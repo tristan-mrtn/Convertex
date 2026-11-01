@@ -117,6 +117,7 @@ function renderTargets() {
       const chip = document.createElement("button");
       chip.className = `chip${id === state.target ? " selected" : ""}`;
       chip.title = FORMATS[id].label;
+      chip.dataset.format = id; // repère stable pour les tests de bout en bout
       chip.append(FORMATS[id].ext.toUpperCase());
       const hops = state.paths[id].path.length;
       if (hops > 1) {

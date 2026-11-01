@@ -36,6 +36,8 @@ export const EDGES = [
   { engine: "pandoc", from: [...PANDOC_IO], to: ["txt"], cost: 1.5 },
 
   { engine: "pdftext", from: ["pdf"], to: ["txt"], cost: 3, needs: ["text"] },
+  // vers Markdown, les formules restent des équations (TeX) que Pandoc sait convertir
+  { engine: "pdftext", from: ["pdf"], to: ["md"], cost: 2.5, needs: ["text"] },
   { engine: "pdfrender", from: ["pdf"], to: ["png", "jpg"], cost: 2, drops: ["text"] },
   { engine: "pdfwrite", from: ["md", "txt"], to: ["pdf"], cost: 2 },
 
