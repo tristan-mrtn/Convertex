@@ -40,6 +40,7 @@ Formulas move from one format to another without turning into unreadable code:
 - Word equations (OMML), LibreOffice (MathML), LaTeX, Typst, PowerPoint, Markdown (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`, GitHub notation) and web pages (MathML, MathJax, KaTeX, Quarto, Wikipedia);
 - in a PDF it writes, they are typeset by MathJax and drawn as vector paths;
 - in a PDF it reads (lecture notes written in LaTeX), they are rebuilt as LaTeX from the fonts and fraction rules, so they come out as real equations in Word, LibreOffice or Markdown;
+- in plain text, RTF and FB2, which have no math notation, they are written as readable text (`u_n`, `x²`, `(b − a)/n`, `√(2 + u_n)`, `∑_(k=0)^n`), with real subscripts and superscripts in RTF and FB2;
 - numbered equations keep their number, and `\eqref` references become "(1)".
 
 The **Graph** tab draws these paths: the source format in the center, one ring per extra step, and the chosen path highlighted. Without a file, it shows the full map of formats and their links.
@@ -150,6 +151,7 @@ End-to-end tests (Chromium loads the extension and converts every file to all it
 npm run build
 node tests/e2e.mjs tests/fixtures/maths && node tests/maths.mjs   # formulas
 node tests/samples.mjs && node tests/e2e.mjs tests/samples        # every format
+node tests/formules-texte.mjs                                     # formulas in plain text, no browser
 ```
 
 This needs a Chromium that accepts `--load-extension` (`npx playwright install chromium`, or its path in `CHROME_PATH`).

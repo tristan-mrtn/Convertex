@@ -1,0 +1,26 @@
+Suites et séries
+
+Suites et séries
+
+Définitions
+
+Soit (u_n)_(n∈ℕ) une suite réelle définie par u₀ = 1 et u_(n+1) = 2u_n + 1. On note z̅ le conjugué de z, ∥x∥ la norme de x et f′(x) la dérivée.
+
+La suite converge vers ℓ si ∀ε > 0, ∃N ∈ ℕ, ∀n ≥ N, |u_n − ℓ| ≤ ε.
+
+On rappelle que lim_(n→∞) (1 + 1/n)^n = e et que binom(n, k) = n!/(k!(n − k)!).
+
+Formules à retenir
+
+∑_(k=1)^n k = n(n + 1)/2
+
+∫₀¹ x² dx = 1/3
+
+A = (1, 2; 3, 4),  det(A) = −2
+
+f(x) = {x si x ≥ 0; −x sinon
+
+(a + b)² = a² + 2ab + b²
+         ≥ 4ab
+
+Racines : √2 ≈ 1,414 et ∛x ; lettres grecques : α, β, Γ, Ω ; vecteurs : u⃗ ⋅ v⃗ et ∇f.

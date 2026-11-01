@@ -1,0 +1,14 @@
+Cas limites (une commande inconnue reste en TeX) : ()², a/b|_(x=0), (x), {y}, 𝒪(n log n), 𝔤, 𝟙, =^!, max_n, ←^g, x, x, y, Res_(z=0) f, 1/2, 1/2, x^(y^z), a_(b_c), √(√x), binom(n, binom(a, b)), a, b; c, d, 1, 2; 3, 4, ∫∫ f, a =^(def) b, Vect(u), ‖x‖₂, ⟨a/b⟩, …, ⋮, ⋱, #A, %, &, $5, {}, x y, x  y, xy, \unsupportedcommand{x}, /, ², _n, √, (x, e^(iθ), ℜ(z), ℵ₀, 𝑨𝒙 = 𝒃, 𝜶, f ∘ g, g^(∘n), 45°, ∠ABC, △ABC, AB ∥ CD, (AB) ⟂ (CD), ∥u∥ ⋅ ∥v∥, |a|b|.
+
+a = b    (1)
+c = d    (2)
+
+x = 1    y = 2    (3)
+z = 3    w = 4    (4)
+
+a + b + c
++d + e    (5)
+
+{1; 2
+
+seulement du texte

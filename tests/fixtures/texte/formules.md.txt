@@ -1,0 +1,26 @@
+Formules en texte brut
+
+Suites : (u_n)_(n∈ℕ), u_(n+1) = u_n/2 + 1, e^(iπ) + 1 = 0, x^(2n), 10^(−3), a_ij.
+
+Analyse : lim_(x→0) (sin x)/x = 1, f′(x), f″(x), ∂f/∂x, ∫_a^b f(x) dx, ∑_(k=0)^n binom(n, k) = 2^n.
+
+Fractions : n(n + 1)/2, n!/(k!(n − k)!), 1/f(x), (b − a)/n, dy/dx, √(a/b), ∛x, root_5(x + 1).
+
+Notations : ∥x∥, |x − 1|, {x ∈ ℝ ∣ x > 0}, ⟨u, v⟩, ⌊x⌋, z̅, u⃗, vec(AB), θ̂, x°, A^(−1), A^⊤.
+
+Logique : ∀ε > 0, ∃N ∈ ℕ, p ⇒ q, ¬p, a ≡ 1 (mod n).
+
+Nombres : √2 ≈ 1,414, f(1, 2), 3 × 4 ÷ 2, −x, +∞, n → +∞.
+
+A = (1, 2; 3, 4),  det(A) = −2.
+
+f(x) = {x si x ≥ 0; −x sinon
+
+(a + b)² = a² + 2ab + b²
+         ≥ 4ab
+
+Théorème. Si f est continue, alors
+
+∫₀¹ f′(t) dt = f(1) − f(0).
+
+C’est tout.

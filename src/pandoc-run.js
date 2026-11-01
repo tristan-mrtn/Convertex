@@ -22,7 +22,7 @@ const BINARY_IO = new Set(["docx", "odt", "epub", "pptx"]);
 const STANDALONE = new Set(["html", "tex", "typ", "rtf", "dbk", "fb2", "ipynb"]);
 // Formules en MathML, que les navigateurs, les liseuses et DocBook affichent sans script
 const MATHML = new Set(["html", "epub", "dbk"]);
-const NO_WRAP = new Set(["md", "ipynb", "adoc"]);
+const NO_WRAP = new Set(["md", "ipynb", "adoc", "txt"]);
 
 const dec = new TextDecoder();
 const enc = new TextEncoder();
@@ -176,8 +176,9 @@ export async function convertWithPandoc(pandoc, { bytes, from, to, name }, { lua
   if (to === "html") options["embed-resources"] = true;
   if (MATHML.has(to)) options["html-math-method"] = { method: "mathml" };
   // Un paragraphe par ligne : une ligne coupée avant « : » (typographie française)
-  // deviendrait une liste de définitions, et AsciiDoc ne relit pas une formule
-  // coupée en deux lignes
+  // deviendrait une liste de définitions, AsciiDoc ne relit pas une formule
+  // coupée en deux lignes, et le texte brut garde ses formules d'un seul tenant
+  // (comme un PDF converti en texte)
   if (NO_WRAP.has(to)) options.wrap = "none";
 
   const files = {};

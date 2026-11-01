@@ -82,6 +82,19 @@ async function pdfText(bytes) {
   return text;
 }
 
+// Code TeX resté visible (une formule que l'on n'a pas su composer ou mettre à plat)
+const TEX_LEFT = /\\(frac|d?sum|int|begin|end|math(bb|cal|rm|bf)|sqrt|left|right|alpha|varepsilon|text|lim|cdot|quad|binom|operatorname|infty|le|ge|leq|geq|to|in)\b|\$\$?[\\{a-zA-Z]/;
+// Formats sans notation mathématique : les formules y sont écrites en texte lisible
+const LINEAR = new Set(["txt", "rtf", "fb2"]);
+
+function linearText(bytes, fmt) {
+  const s = dec.decode(bytes);
+  // RTF : une barre oblique inverse du texte s'écrit « \\ »
+  if (fmt === "rtf") return s.replace(/\\\\/g, "\u0000").replace(/\\[a-z]+-?\d* ?|[{}]/g, "").replace(/\u0000/g, "\\");
+  if (fmt === "fb2") return s.replace(/<binary\b[\s\S]*?<\/binary>/g, "").replace(/<[^>]+>/g, " ");
+  return s;
+}
+
 const failures = [];
 let checked = 0;
 for (const r of report.filter((x) => x.ok)) {
@@ -90,8 +103,14 @@ for (const r of report.filter((x) => x.ok)) {
   const bytes = new Uint8Array(readFileSync(r.out));
   if (r.to === "pdf" && r.from !== "pdf") {
     checked++;
-    const tex = (await pdfText(bytes)).match(/\\(frac|sum|int|begin|mathbb|sqrt|left|alpha)\b|\$\$?[\\{a-zA-Z]/);
+    const tex = (await pdfText(bytes)).match(TEX_LEFT);
     if (tex) failures.push(`${r.file} -> pdf : code TeX visible (« ${tex[0]} »)`);
+    continue;
+  }
+  if (LINEAR.has(r.to)) {
+    checked++;
+    const tex = linearText(bytes, r.to).match(TEX_LEFT);
+    if (tex) failures.push(`${r.file} -> ${r.to} : code TeX visible (« ${tex[0]} »)`);
     continue;
   }
   const n = await formulas(bytes, r.to);

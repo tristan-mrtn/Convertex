@@ -1,0 +1,31 @@
+Chapitre 3 : Intégration
+
+1. Primitives
+
+Soit f une fonction continue sur un intervalle I. On appelle primitive de f toute fonction F dérivable sur I telle que F′ = f.
+
+Proposition. Si F et G sont deux primitives de f, alors il existe c ∈ ℝ tel que G = F + c.
+
+2. Intégrale de Riemann
+
+Pour a < b et f continue sur [a, b], on pose
+
+∫_a^b f(x) dx = lim_(n→+∞) (b − a)/n ∑_(k=0)^(n−1) f(a + k (b − a)/n).
+
+On a par exemple
+
+∫₀¹ x² dx = 1/3,    ∫₀^π sin t dt = 2.
+
+Théorème (intégration par parties). Si u et v sont de classe 𝒞¹ sur [a, b],
+
+∫_a^b u′(t)v(t) dt = [u(t)v(t)]_a^b − ∫_a^b u(t)v′(t) dt.    (1)
+
+3. Exercices
+
+1.  Calculer I_n = ∫₀¹ x^n e^(−x) dx pour n ∈ ℕ.
+
+2.  Montrer que la suite (u_n) définie par u_(n+1) = √(2 + u_n) converge vers 2.
+
+3.  Résoudre le système
+
+    {x + 2y = 5; 3x − y = 1  puis calculer  det (1, 2; 3, −1) = −7.

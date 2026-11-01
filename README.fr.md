@@ -40,6 +40,7 @@ Les formules passent d'un format à l'autre sans devenir du code illisible :
 - équations Word (OMML), LibreOffice (MathML), LaTeX, Typst, PowerPoint, Markdown (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`, notation GitHub) et pages web (MathML, MathJax, KaTeX, Quarto, Wikipédia) ;
 - dans un PDF produit, elles sont composées par MathJax et dessinées en vectoriel ;
 - dans un PDF lu (un poly écrit en LaTeX), elles sont reconstruites en LaTeX à partir des polices et des filets de fractions, pour ressortir en vraies équations dans Word, LibreOffice ou Markdown ;
+- en texte brut, RTF et FB2, qui n'ont pas de notation mathématique, elles sont écrites en texte lisible (`u_n`, `x²`, `(b − a)/n`, `√(2 + u_n)`, `∑_(k=0)^n`), avec de vrais indices et exposants en RTF et FB2 ;
 - les équations numérotées gardent leur numéro, et les renvois `\eqref` deviennent « (1) ».
 
 L'onglet **Graphe** dessine ces chemins : le format source au centre, un anneau par étape supplémentaire, le chemin choisi en surbrillance. Sans fichier, il montre la carte complète des formats et de leurs liens.
@@ -150,6 +151,7 @@ Tests de bout en bout (Chromium charge l'extension et convertit chaque fichier v
 npm run build
 node tests/e2e.mjs tests/fixtures/maths && node tests/maths.mjs   # formules
 node tests/samples.mjs && node tests/e2e.mjs tests/samples        # tous les formats
+node tests/formules-texte.mjs                                     # formules en texte brut, sans navigateur
 ```
 
 Il faut un Chromium qui accepte `--load-extension` (`npx playwright install chromium`, ou son chemin dans `CHROME_PATH`).
