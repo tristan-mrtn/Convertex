@@ -97,12 +97,14 @@ export async function runPath(file, path, options, onStatus) {
   let items = [{ name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }];
   for (let s = 0; s < path.length; s++) {
     const edge = path[s];
+    // réglages audio et vidéo : pour le fichier final seulement, pas pour une étape intermédiaire
+    const stepOptions = s === path.length - 1 ? options : { ...options, av: null };
     const next = [];
     for (let i = 0; i < items.length; i++) {
       if (cancelled) throw cancelError();
       const report = (ratio) => onStatus({ step: s, steps: path.length, edge, ratio: (i + (ratio ?? 0)) / items.length });
       report(0);
-      next.push(...(await runStep(edge, items[i], options, report)));
+      next.push(...(await runStep(edge, items[i], stepOptions, report)));
     }
     items = next;
   }

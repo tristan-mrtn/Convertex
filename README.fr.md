@@ -33,6 +33,10 @@ Le parcours se fait sur des états (format, information perdue) pour écarter le
 
 Quand une étape produit plusieurs fichiers (un PDF de 10 pages donne 10 images), les étapes suivantes s'appliquent à chacun et le résultat est regroupé dans un ZIP.
 
+### Réglages audio et vidéo
+
+Quand la cible est un son ou une vidéo, le panneau propose un niveau de qualité : basse, moyenne, haute (par défaut) ou maximale. Les **réglages avancés** fixent la résolution (de 1080p à 360p, sans jamais agrandir, vidéos verticales comprises), les images par seconde, la fréquence et le mono ou la stéréo, selon ce que chaque format permet.
+
 ### Formules mathématiques
 
 Les formules passent d'un format à l'autre sans devenir du code illisible :
@@ -82,6 +86,8 @@ Les trois gros moteurs ne sont chargés qu'au premier besoin, dans un Web Worker
 
 Convertex ne collecte, ne stocke et ne transmet aucune donnée. Les fichiers sont traités uniquement dans le navigateur de l'utilisateur.
 
+La seule chose que Convertex garde est un compteur de conversions réussies, dans le stockage local du navigateur, pour proposer une fois de laisser un avis sur le Chrome Web Store. Ce compteur ne quitte jamais le navigateur, et le bouton **Laisser un avis** en bas du panneau est un simple lien.
+
 La politique de sécurité du manifest contient `connect-src 'self'` : Chrome bloque toute requête vers un autre domaine que l'extension elle-même. L'extension ne demande aucune permission d'accès aux sites. Tous les moteurs et polices sont embarqués, rien n'est téléchargé depuis un CDN.
 
 ## Sécurité
@@ -119,6 +125,7 @@ src/
   graph.js           arêtes du graphe et Dijkstra
   pipeline.js        exécution d'un chemin, étape par étape
   worker.js          ffmpeg, Pandoc et ImageMagick
+  ffmpeg-args.js     arguments de ffmpeg : qualité, résolution, images par seconde, fréquence, canaux
   pandoc-run.js      options de Pandoc, formules des objets ODT et PPTX
   math.lua           filtre Pandoc qui remet les formules en état
   engines-main.js    tableurs, données, archives, écriture PDF
@@ -141,6 +148,7 @@ tests/               tests de bout en bout et fichiers d'exemple
 - Les formules d'un PDF compilé avec XeLaTeX ou LuaLaTeX (police Latin Modern Math) sont moins bien reconstruites que celles de pdfLaTeX (racines, grandes accolades).
 - Pas de reconnaissance de texte (OCR) : un PDF scanné ne peut pas devenir du texte.
 - Les fichiers très lourds (vidéos de plusieurs Go) sont limités par la mémoire du navigateur.
+- Pas de choix du codec vidéo : H.265 et VP9 ne fonctionnent pas dans la version à un seul fil d'exécution de ffmpeg.wasm (x265 ne termine jamais, VP9 plante dès la première image). Les vidéos sont donc encodées en H.264 (MP4, MOV, MKV, FLV) ou en VP8 (WebM).
 - Les formats propriétaires sans bibliothèque libre (DWG, INDD…) ne sont pas pris en charge.
 
 ## Développement
@@ -152,6 +160,8 @@ npm run build
 node tests/e2e.mjs tests/fixtures/maths && node tests/maths.mjs   # formules
 node tests/samples.mjs && node tests/e2e.mjs tests/samples        # tous les formats
 node tests/formules-texte.mjs                                     # formules en texte brut, sans navigateur
+node tests/ffmpeg-args.mjs                                        # arguments de ffmpeg, sans navigateur
+node tests/av-options.mjs                                         # réglages audio et vidéo, encadré d'avis (avec ffprobe)
 ```
 
 Il faut un Chromium qui accepte `--load-extension` (`npx playwright install chromium`, ou son chemin dans `CHROME_PATH`).
