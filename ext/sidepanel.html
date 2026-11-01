@@ -69,6 +69,55 @@
           <label for="quality" class="small"><span data-i18n="quality"></span> <span id="qualityValue">90</span> %</label>
           <input type="range" id="quality" min="10" max="100" value="90">
         </div>
+        <div id="avBox" hidden>
+          <div id="avLevelRow">
+            <div class="small" data-i18n="quality"></div>
+            <div class="seg" role="radiogroup">
+              <label><input type="radio" name="avLevel" value="low"><span data-i18n="levelLow"></span></label>
+              <label><input type="radio" name="avLevel" value="medium"><span data-i18n="levelMedium"></span></label>
+              <label><input type="radio" name="avLevel" value="high" checked><span data-i18n="levelHigh"></span></label>
+              <label><input type="radio" name="avLevel" value="max"><span data-i18n="levelMax"></span></label>
+            </div>
+          </div>
+          <details id="avAdvanced">
+            <summary class="small"><span data-i18n="advanced"></span><span id="avChanged"></span></summary>
+            <div class="adv-grid">
+              <label id="avHeightRow" class="small"><span data-i18n="resolution"></span>
+                <select id="avHeight">
+                  <option value="0" data-i18n="original"></option>
+                  <option value="1080">1080p</option>
+                  <option value="720">720p</option>
+                  <option value="480">480p</option>
+                  <option value="360">360p</option>
+                </select>
+              </label>
+              <label id="avFpsRow" class="small"><span data-i18n="frameRate"></span>
+                <select id="avFps">
+                  <option value="0" data-i18n="original"></option>
+                  <option value="60">60</option>
+                  <option value="30">30</option>
+                  <option value="25">25</option>
+                  <option value="24">24</option>
+                </select>
+              </label>
+              <label id="avRateRow" class="small"><span data-i18n="sampleRate"></span>
+                <select id="avRate">
+                  <option value="0" data-i18n="original"></option>
+                  <option value="44100" data-i18n="rate44"></option>
+                  <option value="48000" data-i18n="rate48"></option>
+                </select>
+              </label>
+              <label id="avChannelsRow" class="small"><span data-i18n="channels"></span>
+                <select id="avChannels">
+                  <option value="0" data-i18n="original"></option>
+                  <option value="2" data-i18n="stereo"></option>
+                  <option value="1" data-i18n="mono"></option>
+                </select>
+              </label>
+            </div>
+            <p id="avHint" class="muted small" hidden></p>
+          </details>
+        </div>
         <button id="convertBtn" class="primary"></button>
         <div id="progress" hidden>
           <div class="progress-row">
@@ -89,6 +138,21 @@
       <p class="muted small" data-i18n="graphHelp"></p>
     </section>
   </main>
+
+  <footer class="foot">
+    <a id="reviewLink" class="ghost small" target="_blank" rel="noopener"><span aria-hidden="true">★</span> <span data-i18n="leaveReview"></span></a>
+  </footer>
+
+  <!-- Proposé une fois, après quelques conversions réussies (compteur local) -->
+  <dialog id="reviewAsk" class="review-ask" aria-labelledby="reviewTitle">
+    <p id="reviewTitle" class="review-title" data-i18n="reviewTitle"></p>
+    <p class="small muted" data-i18n="reviewText"></p>
+    <div class="review-actions">
+      <a id="reviewYes" class="primary" target="_blank" rel="noopener" data-i18n="leaveReview"></a>
+      <button id="reviewLater" class="ghost small" data-i18n="reviewLater"></button>
+      <button id="reviewNever" class="ghost small" data-i18n="reviewNever"></button>
+    </div>
+  </dialog>
 
   <script type="module" src="dist/sidepanel.js"></script>
 </body>

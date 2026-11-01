@@ -4,6 +4,7 @@
 import { t } from "./i18n.js";
 import { createPandocInstance } from "../node_modules/pandoc-wasm/src/core.js";
 import { convertWithPandoc } from "./pandoc-run.js";
+import { ffmpegArgs } from "./ffmpeg-args.js";
 import MATH_LUA from "./math.lua"; // texte du filtre, inclus dans le paquet par esbuild
 import {
   initializeImageMagick, ImageMagick, MagickFormat, MagickColor, AlphaAction, ColorType,
@@ -96,44 +97,7 @@ function loadFfmpeg() {
   return ffmpegReady;
 }
 
-// Codecs choisis pour chaque format de sortie
-const VIDEO_ARGS = {
-  mp4:  ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac", "-movflags", "+faststart"],
-  mov:  ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac"],
-  mkv:  ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac"],
-  flv:  ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "44100"],
-  webm: ["-c:v", "libvpx", "-b:v", "1M", "-deadline", "realtime", "-cpu-used", "8", "-pix_fmt", "yuv420p", "-c:a", "libvorbis"],
-  avi:  ["-c:v", "mpeg4", "-q:v", "5", "-c:a", "libmp3lame"],
-  wmv:  ["-c:v", "wmv2", "-q:v", "5", "-c:a", "wmav2"],
-  mpeg: ["-c:v", "mpeg1video", "-q:v", "5", "-r", "25", "-c:a", "mp2"],
-  ogv:  ["-c:v", "libtheora", "-q:v", "6", "-pix_fmt", "yuv420p", "-c:a", "libvorbis"],
-};
-const AUDIO_ARGS = {
-  mp3:  ["-c:a", "libmp3lame", "-q:a", "2"],
-  wav:  ["-c:a", "pcm_s16le"],
-  ogg:  ["-c:a", "libvorbis", "-q:a", "5"],
-  flac: ["-c:a", "flac"],
-  aac:  ["-c:a", "aac", "-b:a", "192k"],
-  m4a:  ["-c:a", "aac", "-b:a", "192k"],
-  opus: ["-c:a", "libopus", "-b:a", "128k"],
-  wma:  ["-c:a", "wmav2", "-b:a", "160k"],
-  aiff: ["-c:a", "pcm_s16be"],
-  ac3:  ["-c:a", "ac3", "-b:a", "192k"],
-};
-const EVEN_SIZE = ["-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"];
-const GIF_ARGS = ["-vf", "fps=12,scale='min(480,iw)':-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse", "-loop", "0"];
-
-function ffmpegArgs(from, to) {
-  if (to === "gif") return GIF_ARGS;
-  if (VIDEO_ARGS[to]) {
-    const args = [...VIDEO_ARGS[to]];
-    return ["mpeg4", "mpeg1video", "wmv2"].includes(args[1]) ? args : [...args, ...EVEN_SIZE];
-  }
-  if (AUDIO_ARGS[to]) return ["-vn", ...AUDIO_ARGS[to]];
-  return []; // sous-titres : ffmpeg déduit tout de l'extension
-}
-
-async function runFfmpeg({ id, bytes, from, to }) {
+async function runFfmpeg({ id, bytes, from, to, options }) {
   const core = await loadFfmpeg();
   const inName = `entree.${from}`;
   const outName = `sortie.${to}`;
@@ -142,7 +106,8 @@ async function runFfmpeg({ id, bytes, from, to }) {
   core.FS.writeFile(inName, bytes);
   try {
     core.setTimeout(-1);
-    core.exec("-y", "-i", inName, ...ffmpegArgs(from, to), outName);
+    // réglages audio et vidéo du panneau (seulement pour la dernière étape du chemin)
+    core.exec("-y", "-i", inName, ...ffmpegArgs(from, to, options?.av ?? {}), outName);
     const ret = core.ret;
     core.reset();
     if (ret !== 0) {
