@@ -4,6 +4,7 @@ import { shortestPaths, edgeCount } from "./graph.js";
 import { runPath, cancelRun, ENGINE_LABEL } from "./pipeline.js";
 import { renderRadial, renderOverview, renderLegend } from "./graphview.js";
 import { t, LANG } from "./i18n.js";
+import { LOSSLESS_AUDIO, FIXED_RATE, isVideo, isAudio } from "./ffmpeg-args.js";
 
 const $ = (id) => document.getElementById(id);
 const LOSSY = new Set(["jpg", "webp", "avif", "jxl", "jp2"]);
@@ -141,6 +142,7 @@ function selectTarget(id) {
   renderPath();
   $("actionCard").hidden = false;
   $("qualityRow").hidden = !LOSSY.has(id);
+  showAvSettings(id);
   $("convertBtn").textContent = t("convertTo", FORMATS[id].ext.toUpperCase());
   setStatus("");
   refreshGraph();
@@ -192,6 +194,7 @@ async function convert() {
   try {
     const result = await runPath(state.file, path, {
       quality: Number($("quality").value) / 100,
+      av: readAv(),
     }, ({ step, steps, edge, ratio }) => {
       const overall = (step + Math.min(1, ratio)) / steps;
       $("barFill").style.width = `${Math.round(overall * 100)}%`;
@@ -205,6 +208,7 @@ async function convert() {
     setStatus(isZip
       ? t("doneZip", secs, result.count, result.name, formatSize(result.bytes.length))
       : t("done", secs, result.name, formatSize(result.bytes.length)), "ok");
+    countConversion();
   } catch (err) {
     if (err?.cancelled) setStatus(t("cancelled"));
     else {
@@ -217,6 +221,85 @@ async function convert() {
     $("progress").hidden = true;
     $("barFill").style.width = "0";
   }
+}
+
+/* ---------------- Réglages audio et vidéo ---------------- */
+
+// Visibles quand le fichier final est un son ou une vidéo écrit par ffmpeg : la
+// qualité en 4 niveaux, et dans « Réglages avancés » la résolution, les images par
+// seconde, la fréquence et les canaux (selon ce que le format permet).
+function showAvSettings(id) {
+  const video = isVideo(id);
+  const on = (video || isAudio(id)) && state.paths[id]?.path.at(-1)?.engine === "ffmpeg";
+  $("avBox").hidden = !on;
+  if (!on) return;
+  $("avLevelRow").hidden = LOSSLESS_AUDIO.has(id);
+  $("avHeightRow").hidden = !video;
+  $("avFpsRow").hidden = !video;
+  const fixed = FIXED_RATE[id];
+  $("avRateRow").hidden = Boolean(fixed);
+  $("avHint").hidden = !fixed;
+  if (fixed) $("avHint").textContent = t("rateFixed", t(fixed === 48000 ? "rate48" : "rate44"));
+  updateAvChanged();
+}
+
+function readAv() {
+  if ($("avBox").hidden) return null;
+  const num = (id) => ($(id).closest("label").hidden ? 0 : Number($(id).value) || 0);
+  return {
+    level: document.querySelector('input[name="avLevel"]:checked')?.value ?? "high",
+    height: num("avHeight"),
+    fps: num("avFps"),
+    rate: num("avRate"),
+    channels: num("avChannels"),
+  };
+}
+
+// Nombre de réglages avancés modifiés, rappelé sur le titre quand il est replié
+function updateAvChanged() {
+  const av = readAv();
+  if (!av) return;
+  const n = ["height", "fps", "rate", "channels"].filter((k) => av[k]).length;
+  $("avChanged").textContent = n ? t("advancedChanged", n) : "";
+}
+
+/* ---------------- Avis ---------------- */
+
+// Après 5 conversions réussies, un encadré propose de laisser un avis sur le Chrome
+// Web Store. « Plus tard » le repropose une seule fois, 20 conversions plus loin.
+// Le compteur reste dans ce navigateur (localStorage) : rien n'est envoyé.
+const REVIEW_URL = "https://chromewebstore.google.com/detail/eemhkdhchanmcoejnmfpgilajfngdjad/reviews";
+const REVIEW_KEY = "convertex.review";
+const REVIEW_FIRST = 5;
+const REVIEW_AGAIN = 20;
+
+function reviewState() {
+  try {
+    return JSON.parse(localStorage.getItem(REVIEW_KEY)) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function saveReview(changes) {
+  try {
+    localStorage.setItem(REVIEW_KEY, JSON.stringify({ ...reviewState(), ...changes }));
+  } catch {
+    // stockage indisponible : l'encadré pourra revenir, sans gravité
+  }
+}
+
+function countConversion() {
+  const r = reviewState();
+  const count = (r.count ?? 0) + 1;
+  saveReview({ count });
+  if (r.done || $("reviewAsk").open) return;
+  if (count >= (r.later ?? REVIEW_FIRST)) $("reviewAsk").show();
+}
+
+function closeReview(changes) {
+  saveReview(changes);
+  $("reviewAsk").close();
 }
 
 /* ---------------- Graphe ---------------- */
@@ -266,6 +349,17 @@ $("fileInput").addEventListener("change", () => {
 $("formatOverride").addEventListener("change", (e) => setSource(e.target.value || null));
 $("search").addEventListener("input", renderTargets);
 $("quality").addEventListener("input", () => { $("qualityValue").textContent = $("quality").value; });
+$("avBox").addEventListener("change", updateAvChanged);
+for (const id of ["reviewLink", "reviewYes"]) {
+  $(id).href = REVIEW_URL;
+  $(id).addEventListener("click", () => closeReview({ done: true }));
+}
+$("reviewLater").addEventListener("click", () => {
+  const r = reviewState();
+  // une seule deuxième chance
+  closeReview(r.later ? { done: true } : { later: (r.count ?? 0) + REVIEW_AGAIN });
+});
+$("reviewNever").addEventListener("click", () => closeReview({ done: true }));
 $("convertBtn").addEventListener("click", convert);
 $("cancelBtn").addEventListener("click", cancelRun);
 $("clearFile").addEventListener("click", () => {

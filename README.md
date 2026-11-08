@@ -33,6 +33,10 @@ The search runs over states (format, information lost so far) to rule out absurd
 
 When a step produces several files (a 10-page PDF gives 10 images), the following steps apply to each of them and the result is bundled into a ZIP.
 
+### Audio and video settings
+
+When the target is a sound or a video, the panel offers a quality level: low, medium, high (the default) or maximum. **Advanced settings** set the resolution (1080p down to 360p, never upscaled, portrait videos included), the frames per second, the sample rate and mono or stereo, as far as each format allows.
+
 ### Math formulas
 
 Formulas move from one format to another without turning into unreadable code:
@@ -82,6 +86,8 @@ The interface is shown in French when the browser is in French, in English other
 
 Convertex does not collect, store or transmit any data. Files are processed only inside the user's browser.
 
+The only thing Convertex keeps is a count of successful conversions, in the browser's local storage, so that it can suggest leaving a review on the Chrome Web Store once. This count never leaves the browser, and the **Leave a review** button at the bottom of the panel is a plain link.
+
 The manifest's security policy contains `connect-src 'self'`: Chrome blocks any request to a domain other than the extension itself. The extension asks for no access to websites. All engines and fonts are bundled, nothing is downloaded from a CDN.
 
 ## Security
@@ -119,6 +125,7 @@ src/
   graph.js           graph edges and Dijkstra
   pipeline.js        runs a path, step by step
   worker.js          ffmpeg, Pandoc and ImageMagick
+  ffmpeg-args.js     ffmpeg arguments: quality, resolution, frame rate, sample rate, channels
   pandoc-run.js      Pandoc options, formulas from ODT and PPTX objects
   math.lua           Pandoc filter that repairs formulas
   engines-main.js    spreadsheets, data, archives, PDF writing
@@ -141,6 +148,7 @@ tests/               end-to-end tests and sample files
 - Formulas in a PDF compiled with XeLaTeX or LuaLaTeX (Latin Modern Math font) are rebuilt less accurately than with pdfLaTeX (roots, large braces).
 - No text recognition (OCR): a scanned PDF cannot become text.
 - Very large files (multi-GB videos) are limited by the browser's memory.
+- No choice of video codec: H.265 and VP9 do not run in the single-threaded ffmpeg.wasm build (x265 never finishes, VP9 crashes on the first frame), so videos are encoded with H.264 (MP4, MOV, MKV, FLV) or VP8 (WebM).
 - Proprietary formats without a free library (DWG, INDD…) are not supported.
 
 ## Development
@@ -152,6 +160,8 @@ npm run build
 node tests/e2e.mjs tests/fixtures/maths && node tests/maths.mjs   # formulas
 node tests/samples.mjs && node tests/e2e.mjs tests/samples        # every format
 node tests/formules-texte.mjs                                     # formulas in plain text, no browser
+node tests/ffmpeg-args.mjs                                        # ffmpeg arguments, no browser
+node tests/av-options.mjs                                         # audio and video settings, review prompt (needs ffprobe)
 ```
 
 This needs a Chromium that accepts `--load-extension` (`npx playwright install chromium`, or its path in `CHROME_PATH`).
